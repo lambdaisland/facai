@@ -1,5 +1,8 @@
 (ns lambdaisland.zao.kernel
-  "Heart of the Zao factory logic"
+  "Heart of the Zao factory logic
+
+  This is strictly a Mechanism namespace: generic, unopinionated, verbose.
+  See [[lambdaisland.zao]] for an interface meant for human consumption."
   (:refer-clojure :exclude [ref]))
 
 (defrecord Ref
@@ -27,10 +30,12 @@
              query]
   (cond
     (ref? query)
-    (let [{:keys [ref]} query]
+    (let [{:keys [ref]} query
+          {:keys [factory]} (doto (get registry ref) assert)]
+      (prn [query ref factory])
       (assoc
-        (build (update ctx :path conj query)
-               (get-in registry [ref :factory]))
+        (build (assoc (update ctx :path conj query) :ref ref)
+               factory)
         :ref ref
         :path (vec (reverse path))))
 
@@ -52,8 +57,8 @@
                 query)
      ctx)
 
-    (list? query)
-    {:value (eval query)}
+    (fn? query)
+    {:value (query)}
 
     (coll? query)
     (let [results (map-indexed (fn [idx qry]
@@ -64,50 +69,3 @@
 
     :else
     {:value query}))
-
-(build {:registry {:uuid {:factory '(random-uuid)}}}
-       (ref :uuid))
-
-(build {:registry {:uuid {:factory '(random-uuid)}
-                   :user {:factory {:id (ref :uuid)}}}}
-       [(ref :user) (ref :uuid) 123 '(+ 1 2)])
-
-(build {:registry {:user {:factory {:id (ref :uuid)}}}}
-       :user)
-
-(build {} '(+ 1 1))
-
-(def profile-factory
-  {:handle '(rand-nth ["chromatic69" "headflights" "RoombaBrain"])
-   :name "Jack Appleflap"
-   :website "http://random.site"})
-
-(def article-factory
-  {:title "the article title"
-   :profile (ref ::profile)})
-
-(def uuid-hooks
-  {:finalize-entity (fn [m {:keys [path]}]
-                      (assoc-in m [:value :id] (random-uuid))
-                      #_(assoc-in m [:value :path] path))
-   :handle-association (fn [acc k v value]
-                         (assoc-in acc [:value k] (:id value)))})
-
-(def registry
-  {:uuid {:factory '(random-uuid)}
-   ::profile {:factory profile-factory}
-   ::article {:factory article-factory}})
-
-(build {:registry registry
-        :hooks [uuid-hooks]}
-       (ref ::article))
-
-
-(build {:registry registry
-        :hooks [uuid-hooks]}
-       {:article {:n (ref ::article)}})
-
-(build {:registry registry
-        :hooks [uuid-hooks]}
-       [(ref ::article)
-        (ref ::article)])
