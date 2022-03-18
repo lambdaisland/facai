@@ -4,10 +4,11 @@
   (:require [lioss.main :as lioss]))
 
 (lioss/main
- {:license          :mpl
-  :inception-year   2022
-  :description      ""
-  :group-id         "com.lambdaisland"})
+ {:license                  :mpl
+  :inception-year           2022
+  :description              "The ultimate factory library"
+  :group-id                 "com.lambdaisland"
+  :aliases-as-optional-deps [:jdbc]})
 
 ;; Local Variables:
 ;; mode:clojure

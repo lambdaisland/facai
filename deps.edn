@@ -8,6 +8,10 @@
   {:extra-paths ["dev"]
    :extra-deps  {djblue/portal {:mvn/version "RELEASE"}}}
 
+  :jdbc
+  {:extra-deps {com.github.seancorfield/next.jdbc {:mvn/version "1.2.772"}
+                com.h2database/h2 {:mvn/version "2.1.210"}}}
+
   :test
   {:extra-paths ["test"]
    :extra-deps  {lambdaisland/kaocha {:mvn/version "1.64.1010"}}}}}
