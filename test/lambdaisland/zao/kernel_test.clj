@@ -17,9 +17,8 @@
    ::article {:factory article-factory}})
 
 (def uuid-hooks
-  {:finalize-entity (fn [m {:keys [path]}]
-                      (assoc-in m [:value :id] (random-uuid))
-                      #_(assoc-in m [:value :path] path))
+  {:finalize-entity (fn [m {}]
+                      (assoc-in m [:value :id] (random-uuid)))
    :handle-association (fn [acc k v value]
                          (assoc-in acc [:value k] (:id value)))})
 
@@ -40,42 +39,43 @@
                     (zk/ref :name))))))
 
 (deftest collections-test
-  (is (= {:name "Arne Brasseur", :age 39}
-         (:value (zk/build {:registry {:name {:factory #(str "Arne" " " "Brasseur")}}
+  (is (= {:name "Arne Brasseur" :age 39}
+         (:value (zk/build {:registry {::name {:factory #(str "Arne" " " "Brasseur")}}
                             :hooks [nest-hooks]}
-                           {:name (zk/ref :name)
+                           {:name (zk/ref ::name)
                             :age 39}))))
+
 
   )
 
-(require 'kaocha.repl)
-(kaocha.repl/run 'lambdaisland.zao.kernel-test)
+;; (require 'kaocha.repl)
+;; (kaocha.repl/run 'lambdaisland.zao.kernel-test)
 
 
-(zk/build {:registry {:uuid {:factory '(random-uuid)}}}
-          (ref :uuid))
+;; (zk/build {:registry {:uuid {:factory '(random-uuid)}}}
+;;           (ref :uuid))
 
-(build {:registry {:uuid {:factory '(random-uuid)}
-                   :user {:factory {:id (ref :uuid)}}}}
-       [(ref :user) (ref :uuid) 123 '(+ 1 2)])
+;; (build {:registry {:uuid {:factory '(random-uuid)}
+;;                    :user {:factory {:id (ref :uuid)}}}}
+;;        [(ref :user) (ref :uuid) 123 '(+ 1 2)])
 
-(build {:registry {:user {:factory {:id (ref :uuid)}}}}
-       :user)
+;; (build {:registry {:user {:factory {:id (ref :uuid)}}}}
+;;        :user)
 
-(build {} '(+ 1 1))
-
-
-
-(build {:registry registry
-        :hooks [uuid-hooks]}
-       (ref ::article))
+;; (build {} '(+ 1 1))
 
 
-(build {:registry registry
-        :hooks [uuid-hooks]}
-       {:article {:n (ref ::article)}})
 
-(build {:registry registry
-        :hooks [nest-hooks]}
-       [(ref ::article)
-        (ref ::article)])
+;; (build {:registry registry
+;;         :hooks [uuid-hooks]}
+;;        (ref ::article))
+
+
+;; (build {:registry registry
+;;         :hooks [uuid-hooks]}
+;;        {:article {:n (ref ::article)}})
+
+;; (build {:registry registry
+;;         :hooks [nest-hooks]}
+;;        [(ref ::article)
+;;         (ref ::article)])

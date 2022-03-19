@@ -1,7 +1,8 @@
 {:paths ["src" "resources"]
 
  :deps
- {org.clojure/clojure {:mvn/version "1.11.0-beta1"}}
+ {org.clojure/clojure {:mvn/version "1.11.0-beta1"}
+  lambdaisland/data-printers {:mvn/version "0.7.47"}}
 
  :aliases
  {:dev
