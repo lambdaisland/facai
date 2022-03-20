@@ -16,7 +16,12 @@
   ([f]
    (let [s (sequence)] #(f (s)))))
 
-(defn refify [o]
+(def ref zk/ref)
+(def ref? zk/ref?)
+(def with zt/with)
+(def with? zt/with?)
+
+(defn- refify [o]
   (cond
     (and (keyword? o) (contains? @registry o))
     (zk/ref o)
@@ -35,10 +40,20 @@
   ([factory rules]
    (build factory rules nil))
   ([factory rules opts]
-   (let [{:keys [value] :as res} (zk/build {:registry @registry
-                                            :rules rules}
+   (let [{:keys [value] :as res} (zk/build (merge {:registry @registry
+                                                   :rules rules}
+                                                  opts)
                                            (refify factory))]
      (with-meta value res))))
 
-(def ref zk/ref)
-(def with zt/with)
+(defn build-all
+  ([factory]
+   (build-all factory nil))
+  ([factory rules]
+   (build-all factory rules nil))
+  ([factory rules opts]
+   (let [{:keys [value linked] :as res} (zk/build (merge {:registry @registry
+                                                          :rules rules}
+                                                         opts)
+                                                  (refify factory))]
+     (into [value] (map :value linked)))))

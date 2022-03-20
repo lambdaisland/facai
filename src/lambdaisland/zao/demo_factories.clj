@@ -1,24 +1,70 @@
 (ns lambdaisland.zao.demo-factories
-  (:require [lambdaisland.zao :as z]))
+  (:require [lambdaisland.zao :as zao]
+            [lambdaisland.zao.kernel :as zk]))
 
-(z/defactory :zao/user
+(defn days-from-now [n]
+  (.plusDays (java.time.ZonedDateTime/now (java.time.ZoneId/of "UTC")) n))
+
+(zao/defactory ::user
   {:user/name "John Doe"
-   :user/handle (z/sequence #(str "john" %))
-   :user/email (z/with
-                [:user/handle]
-                #(str % "@doe.com"))
-   :user/roles #{}})
+   :user/handle (zao/sequence #(str "john" %))
+   :user/email (zao/with [:user/handle]
+                         (fn [handle]
+                           (str handle "@doe.com")))
+   :user/roles #{}}
+  {:traits
+   {:admin
+    {:user/roles #{:admin}}}})
 
-(z/defactory :zao/admin
-  {:user/roles #{:admin}}
-  {:inherit :zao/user})
+(zao/defactory ::article
+  {:author (zao/ref :zao/user)
+   :title "7 Tip-top Things To Try"}
+  {:traits
+   {:published {:status "published"}
+    :unpublished {:status "unpublished"}
+    :in-the-future {:published-at #(days-from-now 2)}
+    :in-the-past {:published-at #(days-from-now -2)}}})
 
-(z/build :zao/admin)
-(z/build :zao/user {:user/handle "timmy"})
+(comment
+  (zao/build ::user)
+  (zao/build ::user {:user/handle "timmy"})
+  (zao/build ::user {} {:traits [:admin]})
+  (zao/build ::article {::zao/traits [:published :in-the-future]})
 
-(z/build {:john :zao/user
-          :mick :zao/admin}
-         #_         {[:john :user/handle] "johny"
-                     [:mick :user/handle] "micky"})
+  (zao/build ::article
+             {::zao/traits [:published :in-the-future]
+              [:author :user/handle] "timmy"
+              [:author ::zao/traits] [:admin]})
 
-(get @z/registry :zao/admin)
+  (zk/build {:registry @zao/registry
+             :hooks [{:ref (fn [result qry ctx]
+                             (prn :ref qry '-> result)
+                             result)
+                      :map (fn [result qry ctx]
+                             (prn :map qry '-> result)
+                             result)}]}
+            (zao/ref :zao/article))
+
+  (zao/build {:john :zao/user
+              :mick :zao/admin}
+             {[:john :user/handle] "johny"
+              [:mick :user/handle] "micky"})
+
+  (zao/build (vec (repeat 5 :zao/user))
+             {[:> 0 :user/handle] "foo"})
+
+  (zao/build-all :zao/article
+                 {}
+                 {:hooks [{:map-entry (fn [result query _]
+                                        (if (zk/ref? (val query))
+                                          (update-in result [:value (key query)]  :id)
+                                          result)
+                                        )
+                           :ref (fn [result _ _]
+                                  (prn [:ref (:value result)])
+                                  (if (map? (:value result))
+                                    (update result :value assoc :id (rand-int 100))
+                                    result))}]})
+
+
+  )

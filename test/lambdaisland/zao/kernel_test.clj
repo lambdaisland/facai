@@ -22,10 +22,6 @@
    :handle-association (fn [acc k v value]
                          (assoc-in acc [:value k] (:id value)))})
 
-(def nest-hooks
-  {:handle-association (fn [acc k v value]
-                         (assoc-in acc [:value k] value))})
-
 (deftest atomic-values-test
   (is (= {:value :foo} (zk/build {} :foo)))
   (is (= {:value 123} (zk/build {} 123)))
@@ -47,35 +43,3 @@
 
 
   )
-
-;; (require 'kaocha.repl)
-;; (kaocha.repl/run 'lambdaisland.zao.kernel-test)
-
-
-;; (zk/build {:registry {:uuid {:factory '(random-uuid)}}}
-;;           (ref :uuid))
-
-;; (build {:registry {:uuid {:factory '(random-uuid)}
-;;                    :user {:factory {:id (ref :uuid)}}}}
-;;        [(ref :user) (ref :uuid) 123 '(+ 1 2)])
-
-;; (build {:registry {:user {:factory {:id (ref :uuid)}}}}
-;;        :user)
-
-;; (build {} '(+ 1 1))
-
-
-
-;; (build {:registry registry
-;;         :hooks [uuid-hooks]}
-;;        (ref ::article))
-
-
-;; (build {:registry registry
-;;         :hooks [uuid-hooks]}
-;;        {:article {:n (ref ::article)}})
-
-;; (build {:registry registry
-;;         :hooks [nest-hooks]}
-;;        [(ref ::article)
-;;         (ref ::article)])
