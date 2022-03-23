@@ -4,155 +4,139 @@
   This is strictly a Mechanism namespace: generic, unopinionated, verbose.
   See [[lambdaisland.zao]] for an interface meant for human consumption."
   (:refer-clojure :exclude [ref])
-  (:require [lambdaisland.zao.toposort :as topo]
+  (:require [lambdaisland.zao.macro-util :as macro-util]
             [lambdaisland.data-printers :as data-printers]))
 
-(defrecord Ref [ref opts])
+(defn factory
+  "Create a factory instance, these are just maps with a `(comp :type meta)` of
+  `:zao/factory`. Will take keyword arguments (`:id`, `:traits`), and one
+  non-keyword argument which will become the factory template (can also be
+  passed explicitly with a `:template` keyword)."
+  [& args]
+  (loop [m ^{:type :zao/factory} {}
+         [x & xs] args]
+    (cond
+      (nil? x)
+      m
+      (simple-keyword? x)
+      (recur (assoc m (keyword "zao.factory" (name x)) (first xs))
+             (next xs))
+      (qualified-keyword? x)
+      (recur (assoc m x (first xs))
+             (next xs))
+      :else
+      (recur (assoc m :zao.factory/template x)
+             xs))))
 
-(data-printers/register-print Ref 'zao/ref (comp vector :ref))
+(defmacro defactory [fact-name & args]
+  `(def ~fact-name (factory :id '~(macro-util/qualify-sym &env fact-name) ~@args)))
 
-(defn ref
-  "Create a reference to a factory, to be resolved in the registry."
-  ([ref] (->Ref ref nil))
-  ([ref opts] (->Ref ref opts)))
+(defn factory? [o]
+  (= :zao/factory (:type (meta o))))
 
-(defn ref?
-  "Is `o` a [[Ref]]"
-  [o]
-  (instance? Ref o))
-
-(defn run-hooks [hooks hook val & args]
-  (reduce (fn [val hookmap]
-            (if-let [f (get hookmap hook)]
-              (apply f val args)
-              val))
-          val
-          hooks))
+(defn factory-template
+  [{:zao.factory/keys [template inherit traits]}
+   {with :with selected-traits :traits}]
+  (cond->
+      (reduce
+       (fn [fact trait]
+         (merge fact (get traits trait)))
+       (if inherit
+         (merge (factory-template inherit nil) template)
+         template)
+       selected-traits)
+    with
+    (merge with)))
 
 (defn- push-path [ctx segment]
   (assert segment)
-  (update ctx :path (fnil conj []) segment))
+  (update ctx :zao.build/path (fnil conj []) segment))
 
 (defn- into-linked [result results]
-  (update result :linked (fnil into []) results))
+  (update result :zao.result/linked (fnil into []) results))
 
-(defn- resolve-ref [registry {:keys [ref opts]}]
-  (let [ref-traits (:traits opts)
-        {:keys [factory inherit traits]} (doto (get registry ref) assert)]
+
+(declare build build-template)
+
+(defn build-factory [{:zao.build/keys [path] :as ctx} factory opts]
+  (let [{:zao.factory/keys [id]} factory]
+    (-> ctx
+        (cond-> id (push-path id))
+        (build-template (factory-template factory opts))
+        (assoc :zao.factory/id id)
+        (cond-> path (assoc :zao.build/path path)))))
+
+(defn build-template [{:zao.build/keys [path] :as ctx} tmpl]
+  (cond
+    (map-entry? tmpl)
+    (let [{:zao.result/keys [value linked] :as result} (build (push-path ctx (key tmpl)) (val tmpl) nil)]
+      {:zao.result/value [(key tmpl) value]
+       :zao.result/linked (cond-> linked (ref? (val tmpl)) (conj (dissoc result :zao.result/linked)))})
+
+    (map? tmpl)
     (reduce
-     (fn [fact trait]
-       (merge fact (get traits trait)))
-     (if inherit
-       (merge (resolve-ref registry inherit) factory)
-       factory)
-     ref-traits)))
+     (fn [acc kv]
+       (let [{:zao.result/keys [value linked]}
+             (build-template (assoc ctx :zao.result/value (:zao.result/value acc)) kv)]
+         (-> acc
+             (update :zao.result/value conj value)
+             (into-linked linked))))
+     {:zao.result/value {}}
+     tmpl)
 
-(comment
-  (resolve-ref {:author {:factory {:name "Arne"}
-                         :traits {:admin {:admin? true}}}}
-               (ref :author {:traits [:admin]})))
+    (coll? tmpl)
+    (let [results (map-indexed (fn [idx qry]
+                                 (build (push-path ctx idx) qry nil))
+                               tmpl)]
+      {:zao.result/value (into (empty tmpl) (map :zao.result/value) results)
+       :zao.result/linked (into [] (mapcat :zao.result/linked results))})
 
-(defn- path-match? [path selector]
-  (when (seq path)
-    (loop [[p & ps] path
-           [s & ss] (if (sequential? selector) selector [:> selector])
-           i 0]
-      (prn [p ps s ss])
-      (cond
-        (= i 10)
-        (throw (ex-info "overflow" {:pps [p ps] :sss [s ss]}))
+    (fn? tmpl)
+    {:zao.result/value (tmpl)}
 
-        (and (nil? p) (nil? s))
-        true
+    :else
+    {:zao.result/value tmpl}))
 
-        (or (nil? p) (nil? s))
-        false
+(defn build [ctx query opts]
+  (if (factory? query)
+    (build-factory ctx query opts)
+    (build-template ctx query)))
 
-        (= s p)
-        (if (and (seq ss) (seq ps))
-          (recur ps ss (inc i))
-          (and (empty? ss) (empty? ps)))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defactory user
+  {:name "Arne"})
 
-        (= s :>)
-        (if (= (first ss) p)
-          (recur ps (next ss) (inc i))
-          false)
+(defactory post
+  {:title "Things To Do"
+   :author user})
 
-        :else
-        (recur ps (cons s ss) (inc i))))))
+(defactory admin
+  :inherit user
+  {:admin? true})
 
-(defn match-rule [rules path]
-  (some #(when (path-match? path (key %))
-           (val %))
-        rules))
+(defactory line-item
+  {:description "widget"
+   :quantity 1
+   :price 9.99}
+  :traits
+  {:discounted
+   {:price 0.99
+    :discount "5%"}})
 
-(defn build [{:keys [registry hooks path rules] :as ctx} query]
-  (let [rule (match-rule rules path)
-        process (fn [type f]
-                  (let [result (f ctx)]
-                    (run-hooks hooks type result query ctx)))]
-    (cond
-      (and rule (not= rule query))
-      (process :rule #(build % rule))
+(defactory dice-roll
+  {:dice-type #(rand-nth [4 6 8 10 12 20])
+   :number-of-dice #(inc (rand-int 5))})
 
-      (ref? query)
-      (process
-       :ref
-       #(let [rule-traits (match-rule rules (conj path :lambdaisland.zao/traits))
-              query (cond-> query rule-traits (update-in [:opts :traits] into rule-traits))
-              ref (:ref query)]
-          (prn path)
-          (-> %
-              (push-path ref)
-              (assoc :ref ref)
-              (build (doto (resolve-ref registry query) prn))
-              (assoc :ref ref :path path))))
+(build nil user nil)
+(build nil user {:with {:name "John"}})
+(build nil user {:with {:age 20}})
 
-      (topo/with? query)
-      (process
-       :with
-       (fn [ctx]
-         {:value (apply (:f query) ((apply juxt (:args query)) (:value ctx)))
-          :ctx ctx}))
+(build nil post nil)
+(build nil admin nil)
 
-      (map-entry? query)
-      (process
-       :map-entry
-       (fn [ctx]
-         (let [{:keys [value linked ctx] :as result} (build (push-path ctx (key query)) (val query))]
-           {:value (assoc (:value ctx) (key query) value)
-            :linked (cond-> linked (ref? (val query)) (conj (dissoc result :linked :ctx)))
-            :ctx ctx})))
+(build nil post {:with {:author admin}})
 
-      (map? query)
-      (process
-       :map
-       (fn [ctx]
-         (reduce
-          (fn [{:keys [ctx] :as acc} kv]
-            (let [{:keys [value linked #_ctx]}
-                  (build (assoc ctx :value (:value acc)) kv)]
-              (-> acc
-                  (assoc :value value)
-                  (into-linked linked))))
-          {:value {}
-           :ctx ctx}
-          (topo/sort-by-with query))))
+(build nil line-item {:traits [:discounted]})
 
-      (coll? query)
-      (process
-       :coll
-       (fn [ctx]
-         (let [results (map-indexed (fn [idx qry]
-                                      (build (push-path ctx idx) qry))
-                                    query)]
-           {:value (into (empty query) (map :value) results)
-            :linked (into [] (mapcat :linked results))
-            :ctx ctx})))
-
-      (fn? query)
-      (process :fn (fn [ctx] {:value (query) :ctx ctx}))
-
-      :else
-      (process :literal (fn [ctx] {:value query :ctx ctx})))))
+(build nil dice-roll nil)

@@ -12,34 +12,38 @@
    :profile (zk/ref ::profile)})
 
 (def registry
-  {:uuid {:factory random-uuid}
-   ::profile {:factory profile-factory}
-   ::article {:factory article-factory}})
+  {:uuid {:zao.factory/name :uuid
+          :zao.factory/definition random-uuid}
+   ::profile {:zao.factory/name ::profile
+              :zao.factory/definition profile-factory}
+   ::article {:zao.factory/name ::article
+              :zao.factory/definition article-factory}})
 
 (def uuid-hooks
-  {:finalize-entity (fn [m {}]
-                      (assoc-in m [:value :id] (random-uuid)))
-   :handle-association (fn [acc k v value]
-                         (assoc-in acc [:value k] (:id value)))})
+  {:map (fn [res qry ctx]
+          (assoc-in res [:value :id] (random-uuid)))
+   :ref (fn [res qry ctx]
+          (if-let [id (and (map? (:value res))
+                           (:id (:value res)))]
+            (assoc-in res [:value (:ref qry)] id)))})
 
 (deftest atomic-values-test
-  (is (= {:value :foo} (zk/build {} :foo)))
-  (is (= {:value 123} (zk/build {} 123)))
-  (is (= {:value "foo"} (zk/build {} "foo")))
-  (is (= {:value #inst "2022-03-18"} (zk/build {} #inst "2022-03-18"))))
+  (is (= {:value :foo :ctx {}} (zk/build {} :foo)))
+  (is (= {:value 123 :ctx {}} (zk/build {} 123)))
+  (is (= {:value "foo" :ctx {}} (zk/build {} "foo")))
+  (is (= {:value #inst "2022-03-18" :ctx {}} (zk/build {} #inst "2022-03-18"))))
 
 (deftest basic-registry-test
   (is (= "Arne Brasseur"
          (:value
-          (zk/build {:registry {:name {:factory #(str "Arne" " " "Brasseur")}}}
+          (zk/build {:registry {:name {:zao.factory/definition #(str "Arne" " " "Brasseur")}}}
                     (zk/ref :name))))))
 
-(deftest collections-test
+(deftest map-test
   (is (= {:name "Arne Brasseur" :age 39}
-         (:value (zk/build {:registry {::name {:factory #(str "Arne" " " "Brasseur")}}
-                            :hooks [nest-hooks]}
+         (:value (zk/build {:registry {::name {:zao.factory/definition #(str "Arne" " " "Brasseur")}}}
                            {:name (zk/ref ::name)
-                            :age 39}))))
+                            :age 39})))))
 
-
-  )
+(zk/build {:registry registry}
+          (zk/ref ::article))

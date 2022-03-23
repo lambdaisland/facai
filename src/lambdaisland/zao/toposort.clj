@@ -75,3 +75,8 @@
      })
 
   (sort-by-with m))
+
+
+#_#_
+(topo/with? query)
+{:value (apply (:f query) ((apply juxt (:args query)) (:value ctx)))}

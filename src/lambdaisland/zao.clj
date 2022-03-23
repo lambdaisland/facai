@@ -4,47 +4,30 @@
   (:require [lambdaisland.zao.kernel :as zk]
             [lambdaisland.zao.toposort :as zt]))
 
-(defonce registry (atom {}))
+(def registry (atom {}))
 
-(defmacro defactory [name factory & [opts]]
-  `(swap! registry assoc ~name (assoc ~opts :factory ~factory)))
 
-(defn sequence
-  ([]
-   (let [cnt (volatile! 0)]
-     #(vswap! cnt inc)))
-  ([f]
-   (let [s (sequence)] #(f (s)))))
+(defn defactory [fname & args]
+  (let [m (apply make-factory fname args)]
+    (swap! registry assoc fname m)))
 
 (def ref zk/ref)
 (def ref? zk/ref?)
 (def with zt/with)
 (def with? zt/with?)
 
-(defn- refify [o]
-  (cond
-    (and (keyword? o) (contains? @registry o))
-    (zk/ref o)
-
-    (map? o)
-    (update-vals o refify)
-
-    (coll? o)
-    (into (empty o) (map refify) o)
-
-    :else o))
+(defn refify [registry o]
+  (if (keyword? o)
+    (ref o)
+    o))
 
 (defn build
   ([factory]
    (build factory nil))
-  ([factory rules]
-   (build factory rules nil))
-  ([factory rules opts]
-   (let [{:keys [value] :as res} (zk/build (merge {:registry @registry
-                                                   :rules rules}
-                                                  opts)
-                                           (refify factory))]
-     (with-meta value res))))
+  ([factory {:keys [with traits]}]
+   (let [{:keys [value] :as res}
+         (zk/build {:registry @registry} (refify @registry factory))]
+     value)))
 
 (defn build-all
   ([factory]
@@ -52,8 +35,6 @@
   ([factory rules]
    (build-all factory rules nil))
   ([factory rules opts]
-   (let [{:keys [value linked] :as res} (zk/build (merge {:registry @registry
-                                                          :rules rules}
-                                                         opts)
-                                                  (refify factory))]
-     (into [value] (map :value linked)))))
+   (let [{:keys [value linked] :as res}
+         (zk/build {:registry @registry} (refify @registry factory))]
+     (into [value] linked))))

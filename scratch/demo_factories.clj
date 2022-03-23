@@ -1,9 +1,9 @@
+(ns scratch.demo-factories)
+
 (ns lambdaisland.zao.demo-factories
   (:require [lambdaisland.zao :as zao]
-            [lambdaisland.zao.kernel :as zk]))
-
-(defn days-from-now [n]
-  (.plusDays (java.time.ZonedDateTime/now (java.time.ZoneId/of "UTC")) n))
+            [lambdaisland.zao.kernel :as zk]
+            [lambdaisland.zao.helpers :as zh]))
 
 (zao/defactory ::user
   {:user/name "John Doe"
@@ -12,27 +12,36 @@
                          (fn [handle]
                            (str handle "@doe.com")))
    :user/roles #{}}
-  {:traits
-   {:admin
-    {:user/roles #{:admin}}}})
+
+  :traits
+  {:admin
+   {:user/roles #{:admin}}})
+
+(zao/defactory ::member
+  :inherit ::user
+  {:membership_expires #(zh/days-from-now 100)})
 
 (zao/defactory ::article
   {:author (zao/ref :zao/user)
    :title "7 Tip-top Things To Try"}
-  {:traits
-   {:published {:status "published"}
-    :unpublished {:status "unpublished"}
-    :in-the-future {:published-at #(days-from-now 2)}
-    :in-the-past {:published-at #(days-from-now -2)}}})
+  :traits
+  {:published {:status "published"}
+   :unpublished {:status "unpublished"}
+   :in-the-future {:published-at #(zh/days-from-now 2)}
+   :in-the-past {:published-at #(zh/days-ago 2)}})
+
+
+
 
 (comment
   (zao/build ::user)
   (zao/build ::user {:user/handle "timmy"})
   (zao/build ::user {} {:traits [:admin]})
-  (zao/build ::article {::zao/traits [:published :in-the-future]})
+  (zao/build ::article {} {::zao/traits [:published :in-the-future]})
 
   (zao/build ::article
-             {::zao/traits [:published :in-the-future]
+             {[::article :> :title] ""
+              ::zao/traits [:published :in-the-future]
               [:author :user/handle] "timmy"
               [:author ::zao/traits] [:admin]})
 

@@ -9,6 +9,10 @@ The ultimate factory library
 Or it will be... this is still heavily work in progress. This library is baby.
 Stay tuned.
 
+- test.check generators
+- specmonstah -> not intuitive at all
+- fakers
+
 ## Design goals
 
 - simple, convenient, example-based factories a la factory-bot

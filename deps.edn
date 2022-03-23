@@ -1,13 +1,17 @@
 {:paths ["src" "resources"]
 
  :deps
- {org.clojure/clojure {:mvn/version "1.11.0-beta1"}
+ {org.clojure/clojure {:mvn/version "1.11.0"}
   lambdaisland/data-printers {:mvn/version "0.7.47"}}
 
  :aliases
  {:dev
   {:extra-paths ["dev"]
-   :extra-deps  {djblue/portal {:mvn/version "RELEASE"}}}
+   :extra-deps  {djblue/portal {:mvn/version "0.22.1"}}}
+
+  :clerk
+  {:extra-paths ["notebooks"]
+   :extra-deps {io.github.nextjournal/clerk {:mvn/version "0.6.387"}}}
 
   :jdbc
   {:extra-deps {com.github.seancorfield/next.jdbc {:mvn/version "1.2.772"}
