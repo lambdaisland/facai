@@ -7,13 +7,33 @@
   (:require [lambdaisland.zao.macro-util :as macro-util]
             [lambdaisland.data-printers :as data-printers]))
 
+(def ^:dynamic *defer-build?* false)
+
+(defrecord DeferredBuild [var opts])
+
+(defn deferred-build? [o]
+  (instance? DeferredBuild o))
+
+(declare build)
+
+(defrecord Factory []
+  clojure.lang.IFn
+  (invoke [this]
+    (if *defer-build?*
+      (->DeferredBuild (resolve (:zao.factory/id this)) nil)
+      (build nil this nil)))
+  (invoke [this opts]
+    (if *defer-build?*
+      (->DeferredBuild (resolve (:zao.factory/id this)) nil)
+      (build nil this nil))))
+
 (defn factory
   "Create a factory instance, these are just maps with a `(comp :type meta)` of
   `:zao/factory`. Will take keyword arguments (`:id`, `:traits`), and one
   non-keyword argument which will become the factory template (can also be
   passed explicitly with a `:template` keyword)."
   [& args]
-  (loop [m ^{:type :zao/factory} {}
+  (loop [m (with-meta (->Factory) {:type :zao/factory})
          [x & xs] args]
     (cond
       (nil? x)
@@ -29,7 +49,9 @@
              xs))))
 
 (defmacro defactory [fact-name & args]
-  `(def ~fact-name (factory :id '~(macro-util/qualify-sym &env fact-name) ~@args)))
+  `(def ~fact-name
+     (binding [*defer-build?* true]
+       (factory :id '~(macro-util/qualify-sym &env fact-name) ~@args))))
 
 (defn factory? [o]
   (= :zao/factory (:type (meta o))))
@@ -59,12 +81,16 @@
 (declare build build-template)
 
 (defn build-factory [{:zao.build/keys [path] :as ctx} factory opts]
-  (let [{:zao.factory/keys [id]} factory]
-    (-> ctx
-        (cond-> id (push-path id))
-        (build-template (factory-template factory opts))
-        (assoc :zao.factory/id id)
-        (cond-> path (assoc :zao.build/path path)))))
+  (let [{:zao.factory/keys [id]} factory
+        ctx (cond-> ctx id (push-path id))
+        result (-> ctx
+                   (build-template (factory-template factory opts))
+                   (assoc :zao.factory/id id))]
+    (if path
+      (-> result
+          (into-linked [(:zao.result/value result)])
+          (assoc :zao.build/path path))
+      result)))
 
 (defn build-template [{:zao.build/keys [path] :as ctx} tmpl]
   (cond
@@ -98,8 +124,16 @@
     {:zao.result/value tmpl}))
 
 (defn build [ctx query opts]
-  (if (factory? query)
+  (cond
+    (factory? query)
     (build-factory ctx query opts)
+
+    (deferred-build? query)
+    (do
+      (prn (:factory query) (:opts query))
+      (build-factory ctx @(:var query) (:opts query)))
+
+    :else
     (build-template ctx query)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -109,7 +143,7 @@
 
 (defactory post
   {:title "Things To Do"
-   :author user})
+   :author (user {:with {:name "Sonja"}})})
 
 (defactory admin
   :inherit user
@@ -140,3 +174,11 @@
 (build nil line-item {:traits [:discounted]})
 
 (build nil dice-roll nil)
+
+;; Var based approach
+;; - simpler and more intuitive, no need for a registry
+;; - liking the defactory syntax and (build ... {:with ... :traits ...})
+;; - downside, replication. associated factories are always repeated/inlined
+;; - Should the vars be callable? what do they return?
+;; - nice distinction between keywords/symbols in :path
+;; - how to pass options to associations? from within definition or from without
