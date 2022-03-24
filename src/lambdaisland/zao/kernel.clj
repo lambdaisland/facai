@@ -4,8 +4,7 @@
   This is strictly a Mechanism namespace: generic, unopinionated, verbose.
   See [[lambdaisland.zao]] for an interface meant for human consumption."
   (:refer-clojure :exclude [ref])
-  (:require [lambdaisland.zao.macro-util :as macro-util]
-            [lambdaisland.data-printers :as data-printers]))
+  (:require [lambdaisland.data-printers :as data-printers]))
 
 (def ^:dynamic *defer-build?* false)
 
@@ -16,42 +15,24 @@
 
 (declare build)
 
+;; Factories don't have to be records, a simple map with the right keys will do,
+;; but we like it to have invoke so they are callable as a shorthand for calling
+;; build. They should have {:type :zao/factory} as metadata.
+;; - :zao.factory/id - fully qualified symbol of the factory var
+;; - :zao.factory/template - the template we will build, often a map but can be anything
+;; - :zao.factory/traits - map of traits (name -> map)
 (defrecord Factory []
   clojure.lang.IFn
   (invoke [this]
+    ;; When called inside a factory definition we don't actually build the
+    ;; value, we defer that to when the outer factory gets built
     (if *defer-build?*
       (->DeferredBuild (resolve (:zao.factory/id this)) nil)
-      (build nil this nil)))
+      (:zao.result/value (build nil this nil))))
   (invoke [this opts]
     (if *defer-build?*
       (->DeferredBuild (resolve (:zao.factory/id this)) nil)
-      (build nil this nil))))
-
-(defn factory
-  "Create a factory instance, these are just maps with a `(comp :type meta)` of
-  `:zao/factory`. Will take keyword arguments (`:id`, `:traits`), and one
-  non-keyword argument which will become the factory template (can also be
-  passed explicitly with a `:template` keyword)."
-  [& args]
-  (loop [m (with-meta (->Factory) {:type :zao/factory})
-         [x & xs] args]
-    (cond
-      (nil? x)
-      m
-      (simple-keyword? x)
-      (recur (assoc m (keyword "zao.factory" (name x)) (first xs))
-             (next xs))
-      (qualified-keyword? x)
-      (recur (assoc m x (first xs))
-             (next xs))
-      :else
-      (recur (assoc m :zao.factory/template x)
-             xs))))
-
-(defmacro defactory [fact-name & args]
-  `(def ~fact-name
-     (binding [*defer-build?* true]
-       (factory :id '~(macro-util/qualify-sym &env fact-name) ~@args))))
+      (:zao.result/value (build nil this opts)))))
 
 (defn factory? [o]
   (= :zao/factory (:type (meta o))))
@@ -70,42 +51,57 @@
     with
     (merge with)))
 
-(defn- push-path [ctx segment]
+(defn push-path [ctx segment]
   (assert segment)
   (update ctx :zao.build/path (fnil conj []) segment))
 
 (defn- into-linked [result results]
+  (prn [:il result results])
   (update result :zao.result/linked (fnil into []) results))
-
 
 (declare build build-template)
 
-(defn build-factory [{:zao.build/keys [path] :as ctx} factory opts]
+(defn run-hook [hook ctx result]
+  (if-let [hook-fn (get ctx hook)]
+    (hook-fn ctx result)))
+
+(defn build-factory* [{:zao.hooks/keys [build-factory]
+                       :zao.build/keys [path] :as ctx} factory opts]
   (let [{:zao.factory/keys [id]} factory
         ctx (cond-> ctx id (push-path id))
         result (-> ctx
                    (build-template (factory-template factory opts))
                    (assoc :zao.factory/id id))]
     (if path
-      (-> result
-          (into-linked [(:zao.result/value result)])
-          (assoc :zao.build/path path))
+      (assoc result :zao.build/path path)
       result)))
+
+(defn build-factory [{:zao.hooks/keys [build-factory]
+                      :zao.build/keys [path] :as ctx} factory opts]
+  (if build-factory
+    (build-factory ctx factory opts)
+    (let [result (build-factory* ctx factory opts)]
+      (cond-> result
+        path
+        (into-linked [(:zao.result/value result)])))))
+
+(defn build-map-entry [{:zao.hooks/keys [build-association] :as ctx} val-acc k v]
+  (if (and build-association (or (factory? v) (deferred-build? v)))
+    (let [[fact opts] (if (deferred-build? v) [@(:var v) (:opts v)] [v nil])]
+      (build-association ctx val-acc k fact opts))
+    (let [{:zao.result/keys [value linked] :as result} (build (push-path ctx k) v nil)]
+      {:zao.result/value (assoc val-acc k value)
+       :zao.result/linked linked})))
 
 (defn build-template [{:zao.build/keys [path] :as ctx} tmpl]
   (cond
-    (map-entry? tmpl)
-    (let [{:zao.result/keys [value linked] :as result} (build (push-path ctx (key tmpl)) (val tmpl) nil)]
-      {:zao.result/value [(key tmpl) value]
-       :zao.result/linked (cond-> linked (ref? (val tmpl)) (conj (dissoc result :zao.result/linked)))})
-
     (map? tmpl)
-    (reduce
-     (fn [acc kv]
+    (reduce-kv
+     (fn [acc k v]
        (let [{:zao.result/keys [value linked]}
-             (build-template (assoc ctx :zao.result/value (:zao.result/value acc)) kv)]
+             (build-map-entry ctx (:zao.result/value acc) k v)]
          (-> acc
-             (update :zao.result/value conj value)
+             (assoc :zao.result/value value)
              (into-linked linked))))
      {:zao.result/value {}}
      tmpl)
@@ -135,50 +131,3 @@
 
     :else
     (build-template ctx query)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defactory user
-  {:name "Arne"})
-
-(defactory post
-  {:title "Things To Do"
-   :author (user {:with {:name "Sonja"}})})
-
-(defactory admin
-  :inherit user
-  {:admin? true})
-
-(defactory line-item
-  {:description "widget"
-   :quantity 1
-   :price 9.99}
-  :traits
-  {:discounted
-   {:price 0.99
-    :discount "5%"}})
-
-(defactory dice-roll
-  {:dice-type #(rand-nth [4 6 8 10 12 20])
-   :number-of-dice #(inc (rand-int 5))})
-
-(build nil user nil)
-(build nil user {:with {:name "John"}})
-(build nil user {:with {:age 20}})
-
-(build nil post nil)
-(build nil admin nil)
-
-(build nil post {:with {:author admin}})
-
-(build nil line-item {:traits [:discounted]})
-
-(build nil dice-roll nil)
-
-;; Var based approach
-;; - simpler and more intuitive, no need for a registry
-;; - liking the defactory syntax and (build ... {:with ... :traits ...})
-;; - downside, replication. associated factories are always repeated/inlined
-;; - Should the vars be callable? what do they return?
-;; - nice distinction between keywords/symbols in :path
-;; - how to pass options to associations? from within definition or from without

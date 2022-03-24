@@ -9,9 +9,78 @@ The ultimate factory library
 Or it will be... this is still heavily work in progress. This library is baby.
 Stay tuned.
 
-- test.check generators
-- specmonstah -> not intuitive at all
-- fakers
+## Introduction
+
+Most application code deals with some form of "entities", often stored in a
+database, be it relational or something else. In Clojure code these are
+typically represented and passed around as maps.
+
+When calling functions from the REPL, or writing tests, or rendering demo UI
+(e.g. with devcards), you will need data to feed into these things.
+
+```clj
+(deftest user-login-test
+  (let [user {:user/handle "plexus", :user/full-name "Arne Brasseur", :user/pwd-hsh "ff2f92842fa0428"}
+        user (db/create! user)]
+    (is (user/auth-ok? user "sekrit"))))
+```
+
+This is fine, but it has some drawbacks. This test does not care about
+`:user/handle` or `:user/full-name`, but there's a good chance we have to
+include them to have a valid user representation, so it adds noise and reduces
+clarity. And if we add an extra mandatory attribute to a user then we might have
+to update a lot of tests.
+
+This is also a trivial example, maybe to have a valid `user` you first have to
+create a `profile`. Now every test that touches users needs to also create a
+profile and link them, even if the test does not actually care about profiles.
+
+## Same data, different viewpoint
+
+To continue our example of users and profiles. When inserting these into a
+datalog database they might look like this:
+
+```clj
+[{:db/id "profile"
+  :profile/avatar "avatar.jpg"}
+ {:db/id "user"
+  :user/handle "plexus"
+  :user/profile "profile"}]
+```
+
+When getting them back from the database they may look like this:
+
+```clj
+[{:db/id 16904842
+  :profile/avatar "avatar.jpg"}
+ {:db/id 16904913
+  :user/handle "plexus"
+  :user/profile 16904842}]
+```
+
+But when requesting them through the `entity` API (as provided e.g. by Datomic)
+they'll look like this:
+
+```clj
+{:db/id 16904913
+ :user/handle "plexus"
+ :user/profile {:db/id 16904842
+                :profile/avatar "avatar.jpg"}}
+```
+
+When using relational databases you may add an `_id` to a foreign key column,
+and so forth. It's all the same data, but depending on the part of the system
+there may be different convenients around nesting vs flat, normalized or
+denormalized, representation of associations/links, etc.
+
+The idea with factories is that you define the factories for your data once, and
+then set up helpers to get data in the shape you need, and to deal with any
+persistence concerns. This way you get maximal reuse between backend, frontend,
+Clerk notebooks, demo UI, and so forth.
+
+## Getting started
+
+
 
 ## Design goals
 
