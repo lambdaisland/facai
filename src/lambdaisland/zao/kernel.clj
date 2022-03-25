@@ -31,7 +31,7 @@
       (:zao.result/value (build nil this nil))))
   (invoke [this opts]
     (if *defer-build?*
-      (->DeferredBuild (resolve (:zao.factory/id this)) nil)
+      (->DeferredBuild (resolve (:zao.factory/id this)) opts)
       (:zao.result/value (build nil this opts)))))
 
 (defn factory? [o]
@@ -55,9 +55,11 @@
   (assert segment)
   (update ctx :zao.build/path (fnil conj []) segment))
 
-(defn- into-linked [result results]
-  (prn [:il result results])
-  (update result :zao.result/linked (fnil into []) results))
+(defn add-linked [result path entity]
+  (update result :zao.result/linked (fnil assoc {}) path entity))
+
+(defn merge-linked [result linked]
+  (update result :zao.result/linked merge linked))
 
 (declare build build-template)
 
@@ -83,7 +85,7 @@
     (let [result (build-factory* ctx factory opts)]
       (cond-> result
         path
-        (into-linked [(:zao.result/value result)])))))
+        (add-linked path (:zao.result/value result))))))
 
 (defn build-map-entry [{:zao.hooks/keys [build-association] :as ctx} val-acc k v]
   (if (and build-association (or (factory? v) (deferred-build? v)))
@@ -102,7 +104,7 @@
              (build-map-entry ctx (:zao.result/value acc) k v)]
          (-> acc
              (assoc :zao.result/value value)
-             (into-linked linked))))
+             (merge-linked linked))))
      {:zao.result/value {}}
      tmpl)
 
@@ -111,7 +113,7 @@
                                  (build (push-path ctx idx) qry nil))
                                tmpl)]
       {:zao.result/value (into (empty tmpl) (map :zao.result/value) results)
-       :zao.result/linked (into [] (mapcat :zao.result/linked results))})
+       :zao.result/linked (transduce (map :zao.result/linked) merge results)})
 
     (fn? tmpl)
     {:zao.result/value (tmpl)}
@@ -125,9 +127,7 @@
     (build-factory ctx query opts)
 
     (deferred-build? query)
-    (do
-      (prn (:factory query) (:opts query))
-      (build-factory ctx @(:var query) (:opts query)))
+    (build-factory ctx @(:var query) (:opts query))
 
     :else
     (build-template ctx query)))

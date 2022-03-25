@@ -47,7 +47,3 @@
                               :zao.jdbc/qualify? false}))
 
 (create! article)
-
-(post)
-
-(zao/build* post)
