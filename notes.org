@@ -1,0 +1,6 @@
+* TODOs
+
+- :after-build / :after-create on factories
+- datomic support
+- malli / spec checking
+- better persistence interface

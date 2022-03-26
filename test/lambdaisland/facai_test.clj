@@ -22,18 +22,17 @@
   {:title "Things To Do"
    :author (user {:with {:name "Tobi"}})})
 
+(facai/defactory post2
+  {:author (facai/build user {:with {:name "Tobi"}})})
+
 (facai/defactory admin
   :inherit user
   {:admin? true})
 
 (deftest association-test
   (testing "expansion of nested factories is deferred"
-    (is (= (fk/map->Factory
-            {:facai.factory/id 'lambdaisland.facai-test/post,
-             :facai.factory/template
-             {:title "Things To Do",
-              :author (fk/->DeferredBuild #'lambdaisland.facai-test/user {:with {:name "Tobi"}})}})
-           post)))
+    (is (fk/deferred-build? (get-in post [:facai.factory/template :author])))
+    (is (fk/deferred-build? (get-in post2 [:facai.factory/template :author]))))
 
   (is (= {:title "Things To Do", :author {:name "Tobi"}}
          (post)))

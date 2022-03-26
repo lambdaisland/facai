@@ -5,13 +5,26 @@
             [lambdaisland.facai.macro-util :as macro-util]
             [lambdaisland.facai.toposort :as zt]))
 
+(declare build)
+
+;; Factories don't have to be records, a simple map with the right keys will do,
+;; but we like it to have invoke so they are callable as a shorthand for calling
+;; build. They should have {:type :facai/factory} as metadata.
+;; - :facai.factory/id - fully qualified symbol of the factory var
+;; - :facai.factory/template - the template we will build, often a map but can be anything
+;; - :facai.factory/traits - map of traits (name -> map)
+(defrecord Factory []
+  clojure.lang.IFn
+  (invoke [this] (build this nil))
+  (invoke [this opts] (build this opts)))
+
 (defn factory
   "Create a factory instance, these are just maps with a `(comp :type meta)` of
   `:facai/factory`. Will take keyword arguments (`:id`, `:traits`), and one
   non-keyword argument which will become the factory template (can also be
   passed explicitly with a `:template` keyword)."
   [& args]
-  (loop [m (with-meta (fk/->Factory) {:type :facai/factory})
+  (loop [m (with-meta (->Factory) {:type :facai/factory})
          [x & xs] args]
     (cond
       (nil? x)
@@ -29,7 +42,9 @@
 (defmacro defactory [fact-name & args]
   `(def ~fact-name
      (binding [fk/*defer-build?* true]
-       (factory :id '~(macro-util/qualify-sym &env fact-name) ~@args))))
+       (factory :id '~(macro-util/qualify-sym &env fact-name)
+                :resolve #(do ~fact-name)
+                ~@args))))
 
 (defn build*
   ([factory]
@@ -41,7 +56,9 @@
   ([factory]
    (build factory nil))
   ([factory opts]
-   (:facai.result/value (fk/build nil factory opts))))
+   (if-let [thunk (and fk/*defer-build?* (:facai.factory/resolve factory))]
+     (fk/defer thunk opts)
+     (:facai.result/value (fk/build nil factory opts)))))
 
 (defn build-all
   ([factory]

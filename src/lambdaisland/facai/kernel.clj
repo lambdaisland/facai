@@ -8,31 +8,19 @@
 
 (def ^:dynamic *defer-build?* false)
 
-(defrecord DeferredBuild [var opts])
+(defrecord DeferredBuild [thunk opts])
+
+(defn defer [thunk opts]
+  (->DeferredBuild thunk opts))
 
 (defn deferred-build? [o]
   (instance? DeferredBuild o))
 
 (declare build)
 
-;; Factories don't have to be records, a simple map with the right keys will do,
-;; but we like it to have invoke so they are callable as a shorthand for calling
-;; build. They should have {:type :facai/factory} as metadata.
-;; - :facai.factory/id - fully qualified symbol of the factory var
-;; - :facai.factory/template - the template we will build, often a map but can be anything
-;; - :facai.factory/traits - map of traits (name -> map)
-(defrecord Factory []
-  clojure.lang.IFn
-  (invoke [this]
-    ;; When called inside a factory definition we don't actually build the
-    ;; value, we defer that to when the outer factory gets built
-    (if *defer-build?*
-      (->DeferredBuild (resolve (:facai.factory/id this)) nil)
-      (:facai.result/value (build nil this nil))))
-  (invoke [this opts]
-    (if *defer-build?*
-      (->DeferredBuild (resolve (:facai.factory/id this)) opts)
-      (:facai.result/value (build nil this opts)))))
+(defprotocol Persistence
+  (-primary-key [ctx fact value])
+  (-persist! [ctx fact value]))
 
 (defn factory? [o]
   (= :facai/factory (:type (meta o))))
@@ -89,7 +77,7 @@
 
 (defn build-map-entry [{:facai.hooks/keys [build-association] :as ctx} val-acc k v]
   (if (and build-association (or (factory? v) (deferred-build? v)))
-    (let [[fact opts] (if (deferred-build? v) [@(:var v) (:opts v)] [v nil])]
+    (let [[fact opts] (if (deferred-build? v) [((:thunk v)) (:opts v)] [v nil])]
       (build-association ctx val-acc k fact opts))
     (let [{:facai.result/keys [value linked] :as result} (build (push-path ctx k) v nil)]
       {:facai.result/value (assoc val-acc k value)
@@ -116,7 +104,7 @@
        :facai.result/linked (transduce (map :facai.result/linked) merge results)})
 
     (fn? tmpl)
-    {:facai.result/value (tmpl)}
+    (build ctx (tmpl) nil)
 
     :else
     {:facai.result/value tmpl}))
@@ -127,7 +115,7 @@
     (build-factory ctx query opts)
 
     (deferred-build? query)
-    (build-factory ctx @(:var query) (:opts query))
+    (build-factory ctx ((:thunk query)) (:opts query))
 
     :else
     (build-template ctx query)))
