@@ -1,4 +1,4 @@
-(ns lambdaisland.zao.macro-util)
+(ns lambdaisland.facai.macro-util)
 
 (defn qualify-sym
   [env s]

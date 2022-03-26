@@ -1,9 +1,9 @@
 (ns scratch.jdbc)
 
-(ns lambdaisland.zao.jdbc
+(ns lambdaisland.facai.jdbc
   (:require [clojure.string :as str]
-            [lambdaisland.zao :as zao]
-            [lambdaisland.zao.kernel :as zk])
+            [lambdaisland.facai :as facai]
+            [lambdaisland.facai.kernel :as zk])
   (:import (java.sql DriverManager Statement)))
 
 (defn get-connection [url]
@@ -54,7 +54,7 @@
   ([conn factory rules opts]
    (let [{:keys [value] :as res}
          (zk/build (merge
-                    {:registry @zao/registry
+                    {:registry @facai/registry
                      :rules rules
                      :hooks [{:map-entry (fn [result query ctx]
                                            (if (zk/ref? (val query))
@@ -67,7 +67,7 @@
                                        result))
                               }]}
                     opts)
-                   (zao/refify @zao/registry factory))]
+                   (facai/refify @facai/registry factory))]
      (with-meta value res))))
 
 (comment

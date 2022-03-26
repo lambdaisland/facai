@@ -1,2 +1,2 @@
-(ns lambdaisland.zao.api-test
+(ns lambdaisland.facai.api-test
   (:require [clojure.test :refer :all]))

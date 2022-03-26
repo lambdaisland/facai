@@ -1,6 +1,6 @@
 (ns repl-sessoins.var-factories
-  (:require [lambdaisland.zao :as zao]
-            [lambdaisland.zao.kernel :as zk]))
+  (:require [lambdaisland.facai :as facai]
+            [lambdaisland.facai.kernel :as zk]))
 
 (def user
   (zk/factory

@@ -1,14 +1,14 @@
 (ns scratch.demo-factories)
 
-(ns lambdaisland.zao.demo-factories
-  (:require [lambdaisland.zao :as zao]
-            [lambdaisland.zao.kernel :as zk]
-            [lambdaisland.zao.helpers :as zh]))
+(ns lambdaisland.facai.demo-factories
+  (:require [lambdaisland.facai :as facai]
+            [lambdaisland.facai.kernel :as zk]
+            [lambdaisland.facai.helpers :as zh]))
 
-(zao/defactory ::user
+(facai/defactory ::user
   {:user/name "John Doe"
-   :user/handle (zao/sequence #(str "john" %))
-   :user/email (zao/with [:user/handle]
+   :user/handle (facai/sequence #(str "john" %))
+   :user/email (facai/with [:user/handle]
                          (fn [handle]
                            (str handle "@doe.com")))
    :user/roles #{}}
@@ -17,12 +17,12 @@
   {:admin
    {:user/roles #{:admin}}})
 
-(zao/defactory ::member
+(facai/defactory ::member
   :inherit ::user
   {:membership_expires #(zh/days-from-now 100)})
 
-(zao/defactory ::article
-  {:author (zao/ref :zao/user)
+(facai/defactory ::article
+  {:author (facai/ref :facai/user)
    :title "7 Tip-top Things To Try"}
   :traits
   {:published {:status "published"}
@@ -34,35 +34,35 @@
 
 
 (comment
-  (zao/build ::user)
-  (zao/build ::user {:user/handle "timmy"})
-  (zao/build ::user {} {:traits [:admin]})
-  (zao/build ::article {} {::zao/traits [:published :in-the-future]})
+  (facai/build ::user)
+  (facai/build ::user {:user/handle "timmy"})
+  (facai/build ::user {} {:traits [:admin]})
+  (facai/build ::article {} {::facai/traits [:published :in-the-future]})
 
-  (zao/build ::article
+  (facai/build ::article
              {[::article :> :title] ""
-              ::zao/traits [:published :in-the-future]
+              ::facai/traits [:published :in-the-future]
               [:author :user/handle] "timmy"
-              [:author ::zao/traits] [:admin]})
+              [:author ::facai/traits] [:admin]})
 
-  (zk/build {:registry @zao/registry
+  (zk/build {:registry @facai/registry
              :hooks [{:ref (fn [result qry ctx]
                              (prn :ref qry '-> result)
                              result)
                       :map (fn [result qry ctx]
                              (prn :map qry '-> result)
                              result)}]}
-            (zao/ref :zao/article))
+            (facai/ref :facai/article))
 
-  (zao/build {:john :zao/user
-              :mick :zao/admin}
+  (facai/build {:john :facai/user
+              :mick :facai/admin}
              {[:john :user/handle] "johny"
               [:mick :user/handle] "micky"})
 
-  (zao/build (vec (repeat 5 :zao/user))
+  (facai/build (vec (repeat 5 :facai/user))
              {[:> 0 :user/handle] "foo"})
 
-  (zao/build-all :zao/article
+  (facai/build-all :facai/article
                  {}
                  {:hooks [{:map-entry (fn [result query _]
                                         (if (zk/ref? (val query))

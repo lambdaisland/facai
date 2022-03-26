@@ -1,29 +1,29 @@
-(ns lambdaisland.zao
+(ns lambdaisland.facai
   "Factories for unit tests, devcards, etc."
   (:refer-clojure :exclude [def])
-  (:require [lambdaisland.zao.kernel :as zk]
-            [lambdaisland.zao.macro-util :as macro-util]
-            [lambdaisland.zao.toposort :as zt]))
+  (:require [lambdaisland.facai.kernel :as zk]
+            [lambdaisland.facai.macro-util :as macro-util]
+            [lambdaisland.facai.toposort :as zt]))
 
 (defn factory
   "Create a factory instance, these are just maps with a `(comp :type meta)` of
-  `:zao/factory`. Will take keyword arguments (`:id`, `:traits`), and one
+  `:facai/factory`. Will take keyword arguments (`:id`, `:traits`), and one
   non-keyword argument which will become the factory template (can also be
   passed explicitly with a `:template` keyword)."
   [& args]
-  (loop [m (with-meta (zk/->Factory) {:type :zao/factory})
+  (loop [m (with-meta (zk/->Factory) {:type :facai/factory})
          [x & xs] args]
     (cond
       (nil? x)
       m
       (simple-keyword? x)
-      (recur (assoc m (keyword "zao.factory" (name x)) (first xs))
+      (recur (assoc m (keyword "facai.factory" (name x)) (first xs))
              (next xs))
       (qualified-keyword? x)
       (recur (assoc m x (first xs))
              (next xs))
       :else
-      (recur (assoc m :zao.factory/template x)
+      (recur (assoc m :facai.factory/template x)
              xs))))
 
 (defmacro defactory [fact-name & args]
@@ -41,7 +41,7 @@
   ([factory]
    (build factory nil))
   ([factory opts]
-   (:zao.result/value (zk/build nil factory opts))))
+   (:facai.result/value (zk/build nil factory opts))))
 
 (defn build-all
   ([factory]
@@ -49,6 +49,6 @@
   ([factory rules]
    (build-all factory rules nil))
   ([factory rules opts]
-   (let [{:zao.result/keys [value linked] :as res}
+   (let [{:facai.result/keys [value linked] :as res}
          (zk/build nil factory opts)]
      (into [value] (map :value linked)))))

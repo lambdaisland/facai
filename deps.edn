@@ -6,8 +6,10 @@
 
  :aliases
  {:dev
-  {:extra-paths ["dev"]
-   :extra-deps  {djblue/portal {:mvn/version "0.22.1"}}}
+  {:extra-paths ["dev"]}
+
+  :portal
+  {:extra-deps {djblue/portal {:mvn/version "0.22.1"}}}
 
   :clerk
   {:extra-paths ["notebooks"]
@@ -18,6 +20,22 @@
                 camel-snake-kebab/camel-snake-kebab {:mvn/version "0.4.2"}
                 inflections/inflections {:mvn/version "0.13.2"}
                 com.h2database/h2 {:mvn/version "2.1.210"}}}
+
+  :cljs
+  {:extra-deps {org.clojure/clojurescript {:mvn/version "1.11.4"}
+                thheller/shadow-cljs {:mvn/version "2.17.8"}}}
+
+  :spec
+  {:extra-deps {org.clojure/spec.alpha {:mvn/version "0.3.218"}}}
+
+  :malli
+  {:extra-deps {metosin/malli {:mvn/version "0.8.4"}}}
+
+  :datomic-pro
+  {:extra-deps {com.datomic/datomic-pro {:mvn/version "1.0.6316"}}}
+
+  :datomic-cloud
+  {:extra-deps {com.datomic/client-cloud {:mvn/version "1.0.119"}}}
 
   :test
   {:extra-paths ["test"]

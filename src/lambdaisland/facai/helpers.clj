@@ -1,4 +1,4 @@
-(ns lambdaisland.zao.helpers)
+(ns lambdaisland.facai.helpers)
 
 (defn days-ago [n]
   (.minusDays

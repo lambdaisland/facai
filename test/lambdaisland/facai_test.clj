@@ -1,34 +1,34 @@
-(ns lambdaisland.zao-test
-  (:require [lambdaisland.zao :as zao]
-            [lambdaisland.zao.kernel :as zk]
+(ns lambdaisland.facai-test
+  (:require [lambdaisland.facai :as facai]
+            [lambdaisland.facai.kernel :as zk]
             [clojure.test :refer :all]))
 
-(zao/defactory user
+(facai/defactory user
   {:name "Arne"})
 
 (deftest basic-attributes
   (testing "factories are themselves callable"
     (is (= {:name "Arne"} (user))))
   (testing "factories can be built explicitly"
-    (is (= {:name "Arne"} (zao/build user))))
+    (is (= {:name "Arne"} (facai/build user))))
   (testing "overriding attributes"
     (is (= {:name "John"} (user {:with {:name "John"}})))
-    (is (= {:name "John"} (zao/build user {:with {:name "John"}}))))
+    (is (= {:name "John"} (facai/build user {:with {:name "John"}}))))
   (testing "additional attributes"
     (is (= {:name "Arne" :age 39} (user {:with {:age 39}})))
-    (is (= {:name "Arne" :age 39} (zao/build user {:with {:age 39}})))))
+    (is (= {:name "Arne" :age 39} (facai/build user {:with {:age 39}})))))
 
-(zao/defactory post
+(facai/defactory post
   {:title "Things To Do"
    :author (user {:with {:name "Tobi"}})})
 
 (deftest association-test
   (testing "expansion of nested factories is deferred"
     (is (= (zk/map->Factory
-            {:zao.factory/id 'lambdaisland.zao-test/post,
-             :zao.factory/template
+            {:facai.factory/id 'lambdaisland.facai-test/post,
+             :facai.factory/template
              {:title "Things To Do",
-              :author (zk/->DeferredBuild #'lambdaisland.zao-test/user nil)}})
+              :author (zk/->DeferredBuild #'lambdaisland.facai-test/user nil)}})
            post)))
 
   (is (= {:title "Things To Do", :author {:name "Arne"}}
@@ -37,14 +37,14 @@
   (is (= {:title "Things To Do", :author {:name "Arne", :admin? true}}
          (post {:with {:author admin}}))))
 
-(zao/defactory admin
+(facai/defactory admin
   :inherit user
   {:admin? true})
 
 (deftest inheritance
   (is (= {:name "Arne", :admin? true} (admin))))
 
-(zao/defactory line-item
+(facai/defactory line-item
   {:description "widget"
    :quantity 1
    :price 9.99}
@@ -57,7 +57,7 @@
   (is (= {:description "widget", :quantity 1, :price 0.99, :discount "5%"}
          (line-item {:traits [:discounted]}))))
 
-(zao/defactory dice-roll
+(facai/defactory dice-roll
   {:dice-type (constantly 6)
    :number-of-dice (constantly 2)})
 

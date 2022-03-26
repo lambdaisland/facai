@@ -1,7 +1,7 @@
-# zao
+# facai
 
 <!-- badges -->
-[![cljdoc badge](https://cljdoc.org/badge/com.lambdaisland/zao)](https://cljdoc.org/d/com.lambdaisland/zao) [![Clojars Project](https://img.shields.io/clojars/v/com.lambdaisland/zao.svg)](https://clojars.org/com.lambdaisland/zao)
+[![cljdoc badge](https://cljdoc.org/badge/com.lambdaisland/facai)](https://cljdoc.org/d/com.lambdaisland/facai) [![Clojars Project](https://img.shields.io/clojars/v/com.lambdaisland/facai.svg)](https://clojars.org/com.lambdaisland/facai)
 <!-- /badges -->
 
 The ultimate factory library
@@ -117,7 +117,7 @@ Note that this is not a replacement but rather a complement to test.check-style 
 
 &nbsp;
 
-zao is part of a growing collection of quality Clojure libraries created and maintained
+facai is part of a growing collection of quality Clojure libraries created and maintained
 by the fine folks at [Gaiwan](https://gaiwan.co).
 
 Pay it forward by [becoming a backer on our Open Collective](http://opencollective.com/lambda-island),
@@ -133,7 +133,7 @@ You can find an overview of our projects at [lambdaisland/open-source](https://g
 <!-- contributing -->
 ## Contributing
 
-Everyone has a right to submit patches to zao, and thus become a contributor.
+Everyone has a right to submit patches to facai, and thus become a contributor.
 
 Contributors MUST
 

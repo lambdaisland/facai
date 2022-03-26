@@ -1,4 +1,4 @@
-(ns lambdaisland.zao.toposort
+(ns lambdaisland.facai.toposort
   "When factory properties depend on other factory properties using `with`, make
   sure they are evaluated in dependency order."
   (:require [lambdaisland.data-printers :as data-printers]))
@@ -6,7 +6,7 @@
 (defrecord With [args f])
 (defn with [args f] (->With args f))
 (defn with? [o] (instance? With o))
-(data-printers/register-pprint With 'zao/with :args)
+(data-printers/register-pprint With 'facai/with :args)
 
 ;; Kahn's algorithm for topological sort
 

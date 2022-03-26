@@ -1,6 +1,6 @@
-(ns lambdaisland.zao.jdbc-test
-  (:require [lambdaisland.zao.jdbc :as jdbc]
-            [lambdaisland.zao :as zao]
+(ns lambdaisland.facai.jdbc-test
+  (:require [lambdaisland.facai.jdbc :as jdbc]
+            [lambdaisland.facai :as facai]
             [clojure.string :as str]
             [clojure.test :refer :all])
   (:import (java.sql DriverManager)))
@@ -19,17 +19,17 @@
 (defn drop! [conn table]
   (jdbc/exec! conn (str "DROP TABLE " (jdbc/sql-ident table))))
 
-(zao/defactory user
+(facai/defactory user
   {:name "Arne"})
 
-(zao/defactory post
+(facai/defactory post
   {:title "Things To Do"
    :author (user {:with {:name "Tobi"}})})
 
-(zao/defactory article
+(facai/defactory article
   {:title "Things To Do"
    :author user}
-  :zao.jdbc/table "posts")
+  :facai.jdbc/table "posts")
 
 #_
 (let [conn (make-h2-conn "foo")]
@@ -43,7 +43,7 @@
                                                 "author_id" "INT"
                                                 }})))
 
-(def create! (jdbc/create-fn {:zao.jdbc/conn (make-h2-conn "foo")
-                              :zao.jdbc/qualify? false}))
+(def create! (jdbc/create-fn {:facai.jdbc/conn (make-h2-conn "foo")
+                              :facai.jdbc/qualify? false}))
 
 (create! article)

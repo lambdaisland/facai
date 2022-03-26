@@ -1,6 +1,6 @@
 (ns scratch.rules)
 
-(ns lambdaisland.zao.rules)
+(ns lambdaisland.facai.rules)
 
 ;; Parking this here for now, we'll ship rules in a v2, this needs more hammock
 ;; time.

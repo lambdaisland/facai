@@ -1,18 +1,18 @@
 (ns repl-sessions.new-api
-  (:require [lambdaisland.zao :as zao]))
+  (:require [lambdaisland.facai :as facai]))
 
 (set! *print-namespace-maps* false)
 
-(zao/make-factory ::user
+(facai/make-factory ::user
                   {:foo "bar"}
                   :traits
                   {:foo.bar/baz 123})
 
-(zao/defactory ::user
-  {:handle (zao/sequence #(str "user" %))
-   :email (zao/with [:handle] #(str % "@email.com"))})
+(facai/defactory ::user
+  {:handle (facai/sequence #(str "user" %))
+   :email (facai/with [:handle] #(str % "@email.com"))})
 
-(zao/build ::user
+(facai/build ::user
            {:with   {:email "foo.bar@example.com"}
             :traits [:admin]})
 

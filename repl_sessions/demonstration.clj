@@ -1,8 +1,8 @@
 (ns repl-sessions.demonstration
-  (:require [lambdaisland.zao :as zao]
-            [lambdaisland.zao.kernel :as zk]
-            [lambdaisland.zao.helpers :as zh]
-            [lambdaisland.zao.jdbc :as zjdbc]))
+  (:require [lambdaisland.facai :as facai]
+            [lambdaisland.facai.kernel :as zk]
+            [lambdaisland.facai.helpers :as zh]
+            [lambdaisland.facai.jdbc :as zjdbc]))
 
 ;; You start by defining factories for each type of entity you are dealing with
 ;; or storing in the db (i.e. for each table). You just include default values
@@ -10,7 +10,7 @@
 ;;
 ;; Functions are evaluated
 
-(zao/defactory ::user
+(facai/defactory ::user
   {:traits
    {:admin {:roles #{:admin}}}}
   {:name "Enid Ramsey"
@@ -21,15 +21,15 @@
 
 ;; You can now build data based on this factory
 
-(zao/build ::user
-           {::zao/traits [:admin]})
+(facai/build ::user
+           {::facai/traits [:admin]})
 
 ;; And provide any additional values
 
-(zao/build ::user {:email "jeanine@openbg.com", :last-login (zh/days-ago 2)})
+(facai/build ::user {:email "jeanine@openbg.com", :last-login (zh/days-ago 2)})
 
 ;; You can also immediately create this data in the database. There's some proof
-;; of concept code in lambdaisland.zao.jdbc, but more likely we'd provide
+;; of concept code in lambdaisland.facai.jdbc, but more likely we'd provide
 ;; building blocks for you to define your own `create!` function that handles
 ;; the particulars of your DB approach (e.g. table naming conventions,
 ;; namespacing of results, foreign key naming conventions)
@@ -52,12 +52,12 @@
                                     "created_by" "INT"
                                     "created_at" "TIMESTAMP DEFAULT CURRENT_TIMESTAMP"}}))
 
-(zao/build ::user)
+(facai/build ::user)
 (zjdbc/create! conn ::user)
 (zjdbc/create! conn ::property)
 
 
-(zao/build-all ::property)
+(facai/build-all ::property)
 
 [{:address "7900 Nelson Road",
   :created_by 5}
@@ -66,27 +66,27 @@
 
 
 
-(zao/defactory ::property {:table "properties"}
+(facai/defactory ::property {:table "properties"}
   {:address "7900 Nelson Road"
-   ;;   :org-id (zao/ref ::organization)
-   :created_by (zao/ref ::user)})
+   ;;   :org-id (facai/ref ::organization)
+   :created_by (facai/ref ::user)})
 
-(zao/build ::property)
+(facai/build ::property)
 
 
-(zao/defactory ::organization
+(facai/defactory ::organization
   {:name "City of Richmond"
    :payload {"logo_url" "http://opentech.eco/wp-content/uploads/logo_grid.png"}})
 
-(zao/defactory ::cycle
-  {:org-id (zao/ref ::organizaion)
+(facai/defactory ::cycle
+  {:org-id (facai/ref ::organizaion)
    :name "2019 Compliance"
    :from-date #inst "2019-01-01"
    :to-date #inst "2020-01-01"
-   :created-by (zao/ref ::user)})
+   :created-by (facai/ref ::user)})
 
-(zao/defactory ::property-cycle
-  {:property-id (zao/ref ::property)
-   :cycle-id (zao/ref ::cycle)
+(facai/defactory ::property-cycle
+  {:property-id (facai/ref ::property)
+   :cycle-id (facai/ref ::cycle)
    :state :state/added-to-cycle
    :payload {"year_built" "1996"}})

@@ -3,9 +3,9 @@
             [next.jdbc.sql :as sql]
             [next.jdbc.quoted :as quoted]
             [clojure.string :as str]
-            [lambdaisland.zao :as zao]
-            [lambdaisland.zao.kernel :as zk]
-            [lambdaisland.zao.next-jdbc :as znj])
+            [lambdaisland.facai :as facai]
+            [lambdaisland.facai.kernel :as zk]
+            [lambdaisland.facai.next-jdbc :as znj])
   (:import (java.sql DriverManager)))
 
 (defn make-h2-url [name]
@@ -56,17 +56,21 @@
 ;;;;;;
 
 
-(zao/defactory user
+(facai/defactory user
   {:name "Arne"})
 
-(zao/defactory post
+(facai/defactory admin
+  :inherit user
+  {:roles #{:admin}})
+
+(facai/defactory post
   {:title "Things To Do"
    :author-id (user {:with {:name "Tobi"}})})
 
-(zao/defactory article
+(facai/defactory article
   {:title "Things To Do"
    :author-id user}
-  :zao.next-jdbc/table "posts")
+  :facai.next-jdbc/table "posts")
 
 (let [ds (jdbc/get-datasource (make-h2-url (str "test" (rand-int 1e6))))]
   (jdbc/execute! ds [(create-table-sql {:table "users"
@@ -79,16 +83,18 @@
                                                   "author_id" "INT"
                                                   }})])
 
-  (def create! (znj/create-fn {:zao.next-jdbc/ds ds}))
+  (def create! (znj/create-fn {:facai.next-jdbc/ds ds}))
 
   (get-in (create! article)
-          [:zao.result/linked [`article :author-id]]))
+          [:facai.result/linked [`article :author-id]]))
 
-(zao/build* (repeatedly 3 #(binding [zk/*defer-build?* true]
+(facai/build* (repeatedly 3 #(binding [zk/*defer-build?* true]
                              (post {:with {:author-id (user {:with {:age (rand-int 10)}})}}))))
 
-(zao/build*
+(facai/build*
  (binding [zk/*defer-build?* true]
    (post {:with {:author-id (user {:with {:age (rand-int 10)}})}})))
 
 (post {:with {:author-id (user {:with {:age (rand-int 10)}})}})
+
+(create! post)

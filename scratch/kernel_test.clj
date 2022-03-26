@@ -1,5 +1,5 @@
-(ns lambdaisland.zao.kernel-test
-  (:require [lambdaisland.zao.kernel :as zk]
+(ns lambdaisland.facai.kernel-test
+  (:require [lambdaisland.facai.kernel :as zk]
             [clojure.test :refer :all]))
 
 (def profile-factory
@@ -12,12 +12,12 @@
    :profile (zk/ref ::profile)})
 
 (def registry
-  {:uuid {:zao.factory/name :uuid
-          :zao.factory/definition random-uuid}
-   ::profile {:zao.factory/name ::profile
-              :zao.factory/definition profile-factory}
-   ::article {:zao.factory/name ::article
-              :zao.factory/definition article-factory}})
+  {:uuid {:facai.factory/name :uuid
+          :facai.factory/definition random-uuid}
+   ::profile {:facai.factory/name ::profile
+              :facai.factory/definition profile-factory}
+   ::article {:facai.factory/name ::article
+              :facai.factory/definition article-factory}})
 
 (def uuid-hooks
   {:map (fn [res qry ctx]
@@ -36,12 +36,12 @@
 (deftest basic-registry-test
   (is (= "Arne Brasseur"
          (:value
-          (zk/build {:registry {:name {:zao.factory/definition #(str "Arne" " " "Brasseur")}}}
+          (zk/build {:registry {:name {:facai.factory/definition #(str "Arne" " " "Brasseur")}}}
                     (zk/ref :name))))))
 
 (deftest map-test
   (is (= {:name "Arne Brasseur" :age 39}
-         (:value (zk/build {:registry {::name {:zao.factory/definition #(str "Arne" " " "Brasseur")}}}
+         (:value (zk/build {:registry {::name {:facai.factory/definition #(str "Arne" " " "Brasseur")}}}
                            {:name (zk/ref ::name)
                             :age 39})))))
 
