@@ -1,8 +1,8 @@
 (ns repl-sessoins.var-factories
   (:require [lambdaisland.facai :as facai]
-            [lambdaisland.facai.kernel :as zk]))
+            [lambdaisland.facai.kernel :as fk]))
 
 (def user
-  (zk/factory
+  (fk/factory
    :id `user
    {:name "Arne"}))

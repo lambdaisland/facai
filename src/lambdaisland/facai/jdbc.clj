@@ -5,7 +5,7 @@
   (:require [clojure.string :as str]
             [inflections.core :as inflections]
             [lambdaisland.facai :as facai]
-            [lambdaisland.facai.kernel :as zk])
+            [lambdaisland.facai.kernel :as fk])
   (:import (java.sql Statement)))
 
 (defn sql-ident [s]
@@ -24,25 +24,23 @@
    Statement/RETURN_GENERATED_KEYS))
 
 (defn insert! [conn table kvs]
-  (prn [`insert kvs])
   (let [columns (map first kvs)
         values (mapv second kvs)
         stmt (insert-stmt conn {:table table :columns columns})]
     (dotimes [idx (count kvs)]
       (.setObject stmt (inc idx) (get values idx)))
     (assert (= 1 (.executeUpdate stmt)))
-    (doto (first (resultset-seq (.getGeneratedKeys stmt))) prn)))
+    (first (resultset-seq (.getGeneratedKeys stmt)))))
 
 (defn exec! [conn sql]
-  (prn sql)
   (.executeUpdate (.createStatement conn) sql))
 
 (defn build-factory [{:facai.jdbc/keys [conn primary-key table-fn prop->col assoc->col col->prop] :as ctx} fact opts]
   (let [table (or (:facai.jdbc/table fact)
                   (table-fn fact))
-        result (zk/build-factory* ctx fact opts)
+        result (fk/build-factory* ctx fact opts)
         row (insert! conn table (map (fn [[k v]]
-                                       (if ((some-fn zk/factory? zk/deferred-build?) (get-in fact [:facai.factory/template k]))
+                                       (if ((some-fn fk/factory? fk/deferred-build?) (get-in fact [:facai.factory/template k]))
                                          [(assoc->col k) v]
                                          [(prop->col k) v]))
                                      (:facai.result/value result)))]
@@ -52,12 +50,15 @@
                         %
                         row))))
 
-(defn build-association [{:facai.jdbc/keys [assoc->prop primary-key] :as ctx} acc k fact opts]
+
+(defn build-association [{:facai.jdbc/keys [primary-key] :as ctx} acc k fact opts]
   (let [pk (or (:facai.jdbc/primary-key fact) primary-key)
+        ctx (fk/push-path ctx k)
         {:facai.result/keys [value linked] :as result}
-        (zk/build-factory (zk/push-path ctx k) fact opts)]
-    {:facai.result/value (assoc acc k (get value pk))
-     :facai.result/linked ((fnil conj []) linked value)}))
+        (fk/build-factory ctx fact opts)]
+    (-> {:facai.result/value (assoc acc k (get value pk))
+         :facai.result/linked linked}
+        (fk/add-linked (:facai.build/path ctx) value))))
 
 (defn create-fn [{:facai.jdbc/keys [conn primary-key table-fn prop->col col->prop assoc->col qualify?]
                   :or {primary-key :id
@@ -84,4 +85,4 @@
                    :facai.jdbc/col->prop (:facai.jdbc/col->prop opts col->prop)
                    :facai.jdbc/prop->col (:facai.jdbc/prop->col opts prop->col)
                    :facai.jdbc/assoc->col (:facai.jdbc/assoc->col opts assoc->col)}]
-         (zk/build ctx factory opts))))))
+         (fk/build ctx factory opts))))))

@@ -2,7 +2,7 @@
 
 (ns lambdaisland.facai.demo-factories
   (:require [lambdaisland.facai :as facai]
-            [lambdaisland.facai.kernel :as zk]
+            [lambdaisland.facai.kernel :as fk]
             [lambdaisland.facai.helpers :as zh]))
 
 (facai/defactory ::user
@@ -45,7 +45,7 @@
               [:author :user/handle] "timmy"
               [:author ::facai/traits] [:admin]})
 
-  (zk/build {:registry @facai/registry
+  (fk/build {:registry @facai/registry
              :hooks [{:ref (fn [result qry ctx]
                              (prn :ref qry '-> result)
                              result)
@@ -65,7 +65,7 @@
   (facai/build-all :facai/article
                  {}
                  {:hooks [{:map-entry (fn [result query _]
-                                        (if (zk/ref? (val query))
+                                        (if (fk/ref? (val query))
                                           (update-in result [:value (key query)]  :id)
                                           result)
                                         )

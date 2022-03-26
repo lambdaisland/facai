@@ -23,27 +23,34 @@
   {:name "Arne"})
 
 (facai/defactory post
-  {:title "Things To Do"
+  {:title "POST TITLE"
    :author (user {:with {:name "Tobi"}})})
 
 (facai/defactory article
-  {:title "Things To Do"
+  {:title "ARTICLE TITLE"
    :author user}
   :facai.jdbc/table "posts")
 
-#_
-(let [conn (make-h2-conn "foo")]
-  (jdbc/exec! conn (create-table-sql {:table "users"
-                                      :columns {"id" "INT AUTO_INCREMENT PRIMARY KEY"
-                                                "name" "VARCHAR(255)"
-                                                }}))
-  (jdbc/exec! conn (create-table-sql {:table "posts"
-                                      :columns {"id" "INT AUTO_INCREMENT PRIMARY KEY"
-                                                "title" "VARCHAR(255)"
-                                                "author_id" "INT"
-                                                }})))
+(def table-defs [{:table "users"
+                  :columns {"id" "INT AUTO_INCREMENT PRIMARY KEY"
+                            "name" "VARCHAR(255)"}}
+                 {:table "posts"
+                  :columns {"id" "INT AUTO_INCREMENT PRIMARY KEY"
+                            "title" "VARCHAR(255)"
+                            "author_id" "INT"}}])
 
-(def create! (jdbc/create-fn {:facai.jdbc/conn (make-h2-conn "foo")
-                              :facai.jdbc/qualify? false}))
+(deftest basic-jdbc-persistence-test
+  (let [conn (make-h2-conn (str "h2-db-" (rand-int 1e8)))
+        create! (jdbc/create-fn {:facai.jdbc/conn conn
+                                 :facai.jdbc/qualify? false})]
+    (run! #(jdbc/exec! conn (create-table-sql %)) table-defs)
 
-(create! article)
+    (is (= {:facai.factory/id `post
+            :facai.result/value {:id 1
+                                 :title "POST TITLE"
+                                 :author 1}
+            :facai.result/linked {[`post
+                                   :author]
+                                  {:id 1
+                                   :name "Tobi"}}}
+           (create! post)))))

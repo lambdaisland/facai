@@ -4,7 +4,7 @@
             [next.jdbc.quoted :as quoted]
             [clojure.string :as str]
             [lambdaisland.facai :as facai]
-            [lambdaisland.facai.kernel :as zk]
+            [lambdaisland.facai.kernel :as fk]
             [lambdaisland.facai.next-jdbc :as znj])
   (:import (java.sql DriverManager)))
 
@@ -88,11 +88,11 @@
   (get-in (create! article)
           [:facai.result/linked [`article :author-id]]))
 
-(facai/build* (repeatedly 3 #(binding [zk/*defer-build?* true]
+(facai/build* (repeatedly 3 #(binding [fk/*defer-build?* true]
                              (post {:with {:author-id (user {:with {:age (rand-int 10)}})}}))))
 
 (facai/build*
- (binding [zk/*defer-build?* true]
+ (binding [fk/*defer-build?* true]
    (post {:with {:author-id (user {:with {:age (rand-int 10)}})}})))
 
 (post {:with {:author-id (user {:with {:age (rand-int 10)}})}})

@@ -1,2 +1,4 @@
 #kaocha/v1
-{:plugins [:notifier :print-invocations :profiling]}
+{:plugins [:notifier :print-invocations :profiling]
+ :kaocha.plugin.notifier/command "notify-send -a Kaocha %{title} %{message} -i %{icon}"
+ }

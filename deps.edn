@@ -4,6 +4,11 @@
  {org.clojure/clojure {:mvn/version "1.11.0"}
   lambdaisland/data-printers {:mvn/version "0.7.47"}}
 
+ :mvn/repos
+ {"central" {:url "https://repo1.maven.org/maven2/"}
+  "clojars" {:url "https://clojars.org/repo"}
+  "my.datomic.com" {:url "https://my.datomic.com/repo"}}
+
  :aliases
  {:dev
   {:extra-paths ["dev"]}
@@ -39,4 +44,4 @@
 
   :test
   {:extra-paths ["test"]
-   :extra-deps  {lambdaisland/kaocha {:mvn/version "1.64.1010"}}}}}
+   :extra-deps  {lambdaisland/kaocha {:local/root "/home/arne/github/lambdaisland/kaocha"}#_{:mvn/version "1.64.1010"}}}}}

@@ -1,6 +1,6 @@
 (ns lambdaisland.facai-test
   (:require [lambdaisland.facai :as facai]
-            [lambdaisland.facai.kernel :as zk]
+            [lambdaisland.facai.kernel :as fk]
             [clojure.test :refer :all]))
 
 (facai/defactory user
@@ -22,24 +22,24 @@
   {:title "Things To Do"
    :author (user {:with {:name "Tobi"}})})
 
+(facai/defactory admin
+  :inherit user
+  {:admin? true})
+
 (deftest association-test
   (testing "expansion of nested factories is deferred"
-    (is (= (zk/map->Factory
+    (is (= (fk/map->Factory
             {:facai.factory/id 'lambdaisland.facai-test/post,
              :facai.factory/template
              {:title "Things To Do",
-              :author (zk/->DeferredBuild #'lambdaisland.facai-test/user nil)}})
+              :author (fk/->DeferredBuild #'lambdaisland.facai-test/user {:with {:name "Tobi"}})}})
            post)))
 
-  (is (= {:title "Things To Do", :author {:name "Arne"}}
+  (is (= {:title "Things To Do", :author {:name "Tobi"}}
          (post)))
 
   (is (= {:title "Things To Do", :author {:name "Arne", :admin? true}}
          (post {:with {:author admin}}))))
-
-(facai/defactory admin
-  :inherit user
-  {:admin? true})
 
 (deftest inheritance
   (is (= {:name "Arne", :admin? true} (admin))))

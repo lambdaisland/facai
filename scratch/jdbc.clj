@@ -3,7 +3,7 @@
 (ns lambdaisland.facai.jdbc
   (:require [clojure.string :as str]
             [lambdaisland.facai :as facai]
-            [lambdaisland.facai.kernel :as zk])
+            [lambdaisland.facai.kernel :as fk])
   (:import (java.sql DriverManager Statement)))
 
 (defn get-connection [url]
@@ -53,11 +53,11 @@
    (create! conn factory rules nil))
   ([conn factory rules opts]
    (let [{:keys [value] :as res}
-         (zk/build (merge
+         (fk/build (merge
                     {:registry @facai/registry
                      :rules rules
                      :hooks [{:map-entry (fn [result query ctx]
-                                           (if (zk/ref? (val query))
+                                           (if (fk/ref? (val query))
                                              (update result (key query) :id)
                                              result))
                               :map (fn [result query ctx]
@@ -87,7 +87,7 @@
                "profile_id" "INT"}}
     ])
 
-  (zk/build {:registry zk/registry
+  (fk/build {:registry fk/registry
              :hooks [{:finalize-entity (fn [m {:keys [path] ::keys [conn]}]
                                          (if (seq path)
                                            (update m :value #(insert! conn (name (first path)) %))
@@ -95,4 +95,4 @@
                       :handle-association (fn [acc k v value]
                                             (assoc-in acc [:value (str (name k) "_id")] (:id value)))}]
              ::conn conn}
-            (zk/ref ::zk/article)))
+            (fk/ref ::fk/article)))

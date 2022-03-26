@@ -1,6 +1,6 @@
 (ns repl-sessions.demonstration
   (:require [lambdaisland.facai :as facai]
-            [lambdaisland.facai.kernel :as zk]
+            [lambdaisland.facai.kernel :as fk]
             [lambdaisland.facai.helpers :as zh]
             [lambdaisland.facai.jdbc :as zjdbc]))
 
