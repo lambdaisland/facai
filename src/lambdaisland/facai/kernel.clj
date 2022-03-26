@@ -18,10 +18,6 @@
 
 (declare build)
 
-(defprotocol Persistence
-  (-primary-key [ctx fact value])
-  (-persist! [ctx fact value]))
-
 (defn factory? [o]
   (= :facai/factory (:type (meta o))))
 

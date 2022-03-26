@@ -35,6 +35,7 @@
                   :or {primary-key :id
                        quote-fn quoted/ansi
                        table-fn (fn [fact]
+                                  (prn fact)
                                   (inflections/plural (name (:facai.factory/id fact))))
                        }}]
   (let [insert-opts (merge {:builder-fn as-kebab-maps
