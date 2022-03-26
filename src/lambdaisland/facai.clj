@@ -2,8 +2,7 @@
   "Factories for unit tests, devcards, etc."
   (:refer-clojure :exclude [def])
   (:require [lambdaisland.facai.kernel :as fk]
-            [lambdaisland.facai.macro-util :as macro-util]
-            [lambdaisland.facai.toposort :as zt]))
+            [lambdaisland.facai.macro-util :as macro-util]))
 
 (declare build)
 

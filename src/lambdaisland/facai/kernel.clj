@@ -21,6 +21,32 @@
 (defn factory? [o]
   (= :facai/factory (:type (meta o))))
 
+(defn path-match? [path selector]
+  (when (seq path)
+    (loop [[p & ps] path
+           [s & ss] (if (sequential? selector) selector [:> selector])
+           i 0]
+      (cond
+        (and (nil? p) (nil? s))
+        true
+
+        (or (nil? p) (nil? s))
+        false
+
+        (= s p)
+        (if (and (seq ss) (seq ps))
+          (recur ps ss (inc i))
+          (and (empty? ss) (empty? ps)))
+
+
+        (= s :>)
+        (if (= (first ss) p)
+          (recur ps (next ss) (inc i))
+          false)
+
+        :else
+        (recur ps (cons s ss) (inc i))))))
+
 (defn factory-template
   [{:facai.factory/keys [template inherit traits]}
    {with :with selected-traits :traits}]
