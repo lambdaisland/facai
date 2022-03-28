@@ -26,26 +26,27 @@
     (loop [[p & ps] path
            [s & ss] (if (sequential? selector) selector [:> selector])
            i 0]
-      (cond
-        (and (nil? p) (nil? s))
-        true
+      (let [s (if (factory? s) (:facai.factory/id s) s)]
+        (cond
+          (and (nil? p) (nil? s))
+          true
 
-        (or (nil? p) (nil? s))
-        false
+          (or (nil? p) (nil? s))
+          false
 
-        (= s p)
-        (if (and (seq ss) (seq ps))
-          (recur ps ss (inc i))
-          (and (empty? ss) (empty? ps)))
+          (or (= s p) (= s :*))
+          (if (and (seq ss) (seq ps))
+            (recur ps ss (inc i))
+            (and (empty? ss) (empty? ps)))
 
 
-        (= s :>)
-        (if (= (first ss) p)
-          (recur ps (next ss) (inc i))
-          false)
+          (= s :>)
+          (if (= (first ss) p)
+            (recur ps (next ss) (inc i))
+            false)
 
-        :else
-        (recur ps (cons s ss) (inc i))))))
+          :else
+          (recur ps (cons s ss) (inc i)))))))
 
 (defn factory-template
   [{:facai.factory/keys [template inherit traits]}

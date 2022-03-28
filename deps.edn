@@ -11,7 +11,8 @@
 
  :aliases
  {:dev
-  {:extra-paths ["dev"]}
+  {:extra-paths ["dev"]
+   :extra-deps {com.lambdaisland/faker {:mvn/version "0.1.4"}}}
 
   :portal
   {:extra-deps {djblue/portal {:mvn/version "0.22.1"}}}
@@ -43,8 +44,8 @@
   {:extra-deps {com.datomic/client-cloud {:mvn/version "1.0.119"}}}
 
   :datomic-free
-  {:extra-deps  {com.datomic/datomic-free {:mvn/version "0.9.5697"}}}
+  {:extra-deps  {com.datomic/datomic-free {:mvn/version "0.9.5703.21"}}}
 
   :test
   {:extra-paths ["test"]
-   :extra-deps  {lambdaisland/kaocha {:local/root "/home/arne/github/lambdaisland/kaocha"}#_{:mvn/version "1.64.1010"}}}}}
+   :extra-deps  {lambdaisland/kaocha {:mvn/version "1.64.1010"}}}}}

@@ -4,7 +4,7 @@
   (:require [lambdaisland.facai.kernel :as fk]
             [lambdaisland.facai.macro-util :as macro-util]))
 
-(declare build)
+(declare build-val)
 
 ;; Factories don't have to be records, a simple map with the right keys will do,
 ;; but we like it to have invoke so they are callable as a shorthand for calling
@@ -14,8 +14,8 @@
 ;; - :facai.factory/traits - map of traits (name -> map)
 (defrecord Factory []
   clojure.lang.IFn
-  (invoke [this] (build this nil))
-  (invoke [this opts] (build this opts)))
+  (invoke [this] (build-val this nil))
+  (invoke [this opts] (build-val this opts)))
 
 (defn factory
   "Create a factory instance, these are just maps with a `(comp :type meta)` of
@@ -45,15 +45,15 @@
                 :resolve #(do ~fact-name)
                 ~@args))))
 
-(defn build*
-  ([factory]
-   (build* factory nil))
-  ([factory opts]
-   (fk/build nil factory opts)))
-
 (defn build
   ([factory]
    (build factory nil))
+  ([factory opts]
+   (fk/build nil factory opts)))
+
+(defn build-val
+  ([factory]
+   (build-val factory nil))
   ([factory opts]
    (if-let [thunk (and fk/*defer-build?* (:facai.factory/resolve factory))]
      (fk/defer thunk opts)
@@ -68,3 +68,15 @@
    (let [{:facai.result/keys [value linked] :as res}
          (fk/build nil factory opts)]
      (into [value] (map :value linked)))))
+
+(defn value [result]
+  (:facai.result/value result))
+
+(defn sel [result selector]
+  (let [selector (if (vector? selector) selector [selector])]
+    (keep #(when (fk/path-match? (key %) selector)
+             (val %))
+          (:facai.result/linked result))))
+
+(defn sel1 [result path]
+  (first (sel result path)))
