@@ -8,9 +8,9 @@
   (.plusDays
    (java.time.ZonedDateTime/now (java.time.ZoneId/of "UTC")) n))
 
-(defn sequence
+(defn numbered
   ([]
    (let [cnt (volatile! 0)]
      #(vswap! cnt inc)))
   ([f]
-   (let [s (sequence)] #(f (s)))))
+   (let [s (numbered)] #(f (s)))))

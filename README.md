@@ -9,6 +9,407 @@ The ultimate factory library
 Or it will be... this is still heavily work in progress. This library is baby.
 Stay tuned.
 
+## Getting Started
+
+An example speaks a thousand words. How often have you looked at a function
+definition and said to yourself, "if only I could see a real-world example of
+the arguments that this function is called with".
+
+It's a recurring complaint with Clojure, it's often not obvious from the code
+what the shape of the data is. And yet we constantly are in need of snippets of
+data, to drive our REPL sessions, to use in our tests, to populate databases so
+we can test the UI, or to display in Devcards or notebooks.
+
+There are a few solutions to this.
+
+- Simply write out example data as EDN literals, whether it be in tests, or in
+  comments interspersed or at the bottom of the file.
+- Provide test.check style generators so you can generate values on the fly
+- Provide schema/spec-like type information, as a form of documentation, runtime
+  validation, and possibly to drive test.check-style generators
+
+These approaches all have value, but we think there's room for something that
+sits in the middle of literal data and generators, and that can complement these
+approaches.
+
+Test.check is great at finding obscure bugs and testing the narrowest edge
+cases, it does this by deliberately generating "weird" data. Unreadable
+characters, huge data structures, nils. It's great for validating code
+properties, it's not suitable for human consumption. The data is hard to scan.
+As an example of what kind of data flows around in your system it's worthless.
+It's the epitome of untypical data.
+
+Even for testing test.check is not always the best option. Writing good
+generators (even with the help of Spec or Malli) and finding suitable properties
+to test is not trivial and takes practice. Many code bases would be well served
+with more and better example based tests before going that route.
+
+Writing data simply as literals, for instance in unit tests, can be totally
+adequate for that, but it gets repetitive. And much of that data may be defaults
+that have little bearing on what your test is asserting, thus adding noise. It
+also becomes a maintenance issue if you ever decide to change your data
+representation, because of the amount of duplication.
+
+Finally we think that coming up with good example data is valuable work that
+deserves a larger payoff. The same shape of data you need for your tests can
+serve you well when testing UI, or when documenting internal APIs in repl
+sessions or notebooks. 
+
+So this is what Facai factories are about. A standardized way to define
+"factories" for the various types of information that flow through your app. It
+has a bit of smarts, it knows about associations between different types of
+entities, and can integrate with the database (be it relational or datalog), to
+quickly create an insert the data you need.
+
+That concludes the TED talk. Let's have a quick runthrough of what all of this
+looks like.
+
+```clojure
+(ns my-app.factories
+  "When starting out simply create a single `factories` namespace, you can split
+  it up later if it gets too big.
+
+  I'll alias `lambdaisland.facai` to `f` for brevity, you can alias to `facai`
+  if you prefer to be a bit more explicit.
+  "
+  (:require [lambdaisland.facai :as f]))
+
+;; Let's define our first factory. You pass it a template of what your data
+;; looks like. In this case we simply put a literal map.
+(f/defactory user
+  {:user/name   "Lilliam Predovic"
+   :user/handle "lilli42"
+   :user/email  "lilli42@example.com"})
+
+;; We can generate data from this template by calling the factory as a function,
+;; which is an alias for calling `f/build-val`
+
+(user) ; or (f/build-val user)
+;; => #:user{:name "Lilliam Predovic",
+;;           :handle "lilli42",
+;;           :email "lilli42@example.com"}
+
+;; It can take a few options, use `:with` to override or supply additional
+;; values.
+
+(user {:with {:user/name "Mellissa Schimmel"}})
+;; => #:user{:name "Mellissa Schimmel",
+;;           :handle "lilli42",
+;;           :email "lilli42@example.com"}
+
+;; Functions in the template will be called, and the result in turn is treated
+;; as a factory template.
+
+(f/defactory user
+  {:user/name   "Lilliam Predovic"
+   :user/handle "lilli42"
+   :user/email  #(str "lilli" (rand-int 100) "@example.com")})
+
+(user)
+;; => #:user{:name "Lilliam Predovic",
+;;           :handle "lilli42",
+;;           :email "lilli92@example.com"}
+
+;; This means you can decide if you want your factories to be fairly static, or
+;; more dynamic and random. Maybe you want all usernames to be unique, the
+;; numbered helper can help with that.
+
+(require '[lambdaisland.facai.helpers :as fh])
+
+(f/defactory user
+  {:user/name   "Lilliam Predovic"
+   :user/handle (fh/numbered
+ #(str "lilli" %))
+   :user/email  #(str "lilli" (rand-int 100) "@example.com")})
+
+;; The Faker library can also be useful, especially if you want to for instance
+;; populate UIs to take screenshots
+
+(require '[lambdaisland.faker :refer [fake]])
+
+(f/defactory user
+  {:user/name   #(fake [:name :name])
+   :user/handle #(fake [:internet :username])
+   :user/email  #(fake [:internet :email])})
+
+;; Factories can have traits, which are merged into the main template on demand.
+
+(f/defactory article
+  {:article/title "7 Tip-top Things To Try"
+   :article/status :draft}
+
+  :traits
+  {:published {:article/status "published"}
+   :unpublished {:article/status "unpublished"}
+   :in-the-future {:article/published-at #(fh/days-from-now 2)}
+   :in-the-past {:article/published-at #(fh/days-ago 2)}})
+
+(article {:traits [:published :in-the-future]})
+;; => #:article{:title "7 Tip-top Things To Try",
+;;              :status "published",
+;;              :published-at
+;;              #object[java.time.ZonedDateTime 0x345be9a1 "2022-03-30T10:09:17.584903790Z[UTC]"]}
+
+;; If you have associations between data, then you simply use the factory as the value. Or if you want to set some specifics with `:with` or `:traits` you can call the factories.
+
+(f/defactory article
+  {:article/title "7 Tip-top Things To Try"
+   :article/submitter user
+   :article/author (user {:with {:user/roles #{"author"}}})})
+
+(article)
+;; => #:article{:title "7 Tip-top Things To Try",
+;;              :submitter
+;;              #:user{:name "Mr. Reinaldo Hartmann",
+;;                     :handle "garth",
+;;                     :email "ligia@grantgroup.co"},
+;;              :author
+;;              #:user{:name "Doria Wisoky Sr.",
+;;                     :handle "romaine",
+;;                     :email "darrin@schummandsons.co",
+;;                     :roles #{"author"}}}
+
+
+;; Note that the actual expansion gets deferred in this case, the `(user)` call
+;; will only get expanded when building the `article`, so you get a different
+;; username each time.
+
+(article)
+;; => #:article{:title "7 Tip-top Things To Try",
+;;              :submitter
+;;              #:user{:name "Hobert Fadel",
+;;                     :handle "kerry91",
+;;                     :email "delana57@bednarbednarand.com"},
+;;              :author
+;;              #:user{:name "Rosemary Reynolds",
+;;                     :handle "spencer.bruen",
+;;                     :email "laurine@lockmanlockmana.info",
+;;                     :roles #{"author"}}}
+
+;; Factories can inherit from other factories. Often it's preferrable to use
+;; traits, but this can be a useful feature.
+
+
+(f/defactory blog-post
+  :inherit article
+  {:post/uri-slug "/post"})
+
+(blog-post)
+;; => {:article/title "7 Tip-top Things To Try",
+;;     :article/submitter
+;;     #:user{:name "Rima Wintheiser",
+;;            :handle "numbers",
+;;            :email "leandrowelch@welchwelchandwe.co"},
+;;     :article/author
+;;     #:user{:name "Jeffrey Bruen DO",
+;;            :handle "margy81",
+;;            :email "williams.rippin@rippingroup.biz",
+;;            :roles #{"author"}},
+;;     :post/uri-slug "/post"}
+```
+
+## Database Integration
+
+One of the big selling points of Facai is that it makes it trivial to create
+test data and insert it into the database in one go. This can dramatically clean
+up test setup. Currently we ship initial support for next-jdbc, and for Datomic
+peer. These integrations will indubitably have to be improved, but they provide
+a good starting off point. In practice people will likely want to tailor these
+to their specific persistence conventions, so they can serve as inspiration.
+
+### Next.jdbc
+
+In this case you first use `create-fn`, passing in a datasource, and any
+specific configuration regarding the conventions of how you map Clojure data to
+tables.
+
+Factories themselves can take some options as well, like setting an explici
+`facai.next-jdbc/table-name`, if the name can't be inferred from the factory
+name.
+
+```clojure
+(in-ns 'my-app.factories)
+(require '[clojure.string :as str]
+         '[lambdaisland.facai.next-jdbc :as fnj]
+         '[next.jdbc :as nj]
+         '[next.jdbc.quoted :as quoted])
+
+;; Some setup to quickly get an in-memory database. Supposedly you'll have this
+;; kind of stuff in your app somewhere already.
+
+(defn create-table-sql [{:keys [table columns]}]
+  (str "CREATE TABLE " (quoted/ansi table)
+       " (" (str/join
+             ","
+             (for [[k v] columns] (str (quoted/ansi k) " " v)))
+       ")"))
+
+(def table-defs
+  [{:table "users"
+    :columns {"id" "INT AUTO_INCREMENT PRIMARY KEY"
+              "name" "VARCHAR(255)"}}
+   {:table "posts"
+    :columns {"id" "INT AUTO_INCREMENT PRIMARY KEY"
+              "title" "VARCHAR(255)"
+              "author_id" "INT"
+              "created_at" "TIMESTAMP DEFAULT CURRENT_TIMESTAMP"}}])
+
+(f/defactory user
+  {:name #(fake [:name :name])})
+
+(f/defactory post
+  {:title #(fake [:dc-comics :title])
+   :author user})
+
+(f/defactory article
+  {:title "Article"
+   :author user}
+  :facai.jdbc/table "posts")
+
+
+(def ds (nj/get-datasource (str "jdbc:h2:/tmp/h2-db-" (rand-int 1e8))))
+(run! #(nj/execute! ds [(create-table-sql %)]) table-defs)
+(def create!
+  (fnj/create-fn
+   {:facai.next-jdbc/ds ds
+    :facai.next-jdbc/fk-col-fn #(keyword (str (name %) "-id"))}))
+
+(:facai.result/value (create! post))
+;; => {:title "Gotham Central",
+;;     :author-id 2,
+;;     :id 2,
+;;     :created-at #inst "2022-03-28T10:44:05.447624000-00:00"}
+
+;; So what happened here? Faca generated a user, persisted it to the database,
+;; the database assigned a unique id, and we then used that for the association
+;; when generating the article. The datbase also generated the value for
+;; created-at.
+
+;; If you look at the full result of `create!` you see that it also includes these
+;; linked entities.
+
+(create! post)
+;; => {:facai.result/value
+;;     {:title "Crisis On Infinite Earths",
+;;      :author-id 3,
+;;      :id 3,
+;;      :created-at #inst "2022-03-28T10:45:03.367515000-00:00"},
+;;     :facai.result/linked
+;;     {[my-app.factories/post :author] {:name "Richard Quigley", :id 3}},
+;;     :facai.factory/id my-app.factories/post}
+
+;; These are in a map with the keys being the "path". This includes map keys
+;; whenever we recurse into a map, and it includes the names of factories. When
+;; recursing into a sequential collection the indexes are added to the path.
+
+(create! (repeat 3 post))
+;; => #:facai.result{:value (6 5 4),
+;;                   :linked
+;;                   {[0 my-app.factories/post :author]
+;;                    {:name "Ettie Weissnat DDS", :id 4},
+;;                    [0]
+;;                    {:title "Swamp Thing: The Anatomy Lesson",
+;;                     :author-id 4,
+;;                     :id 4,
+;;                     :created-at #inst "2022-03-28T10:46:39.842557000-00:00"},
+;;                    [1 my-app.factories/post :author]
+;;                    {:name "Kermit Hartmann", :id 5},
+;;                    [1]
+;;                    {:title "Detective Comics",
+;;                     :author-id 5,
+;;                     :id 5,
+;;                     :created-at #inst "2022-03-28T10:46:39.898035000-00:00"},
+;;                    [2 my-app.factories/post :author]
+;;                    {:name "Rolanda Torphy", :id 6},
+;;                    [2]
+;;                    {:title "All Star Superman",
+;;                     :author-id 6,
+;;                     :id 6,
+;;                     :created-at #inst "2022-03-28T10:46:39.947156000-00:00"}}}
+
+;; You can use the `sel` and `sel1` helpers to fetch these objects. The matching
+;; works similar to CSS selectors.
+
+;; Say we want to create three posts in the database, and then care about the
+;; authors of the posts.
+
+(f/sel (create! (repeat 3 post)) [:author])
+;; => ({:name "The Hon. Bradley Leuschke", :id 7}
+;;     {:name "Violet Koelpin", :id 8}
+;;     {:name "Annita Hauck", :id 9})
+
+(let [res (create! (repeat 3 post))
+      first-author (f/sel1 res [0 :author])]
+  first-author)
+;; => {:name "Fr. Denisha Wyman", :id 28}
+```
+
+### Datomic
+
+The datomic integration has a `create!` function which takes a datomic
+connection and a factory/template. It will handle tempids.
+
+```clojure
+(require '[datomic.api :as d]
+         '[lambdaisland.facai :as f]
+         '[lambdaisland.facai.datomic :as fd])
+
+(d/create-database "datomic:mem://foo")
+(def conn (d/connect "datomic:mem://foo"))
+
+(f/defactory line-item
+  {:line-item/description "Widgets"
+   :line-item/quantity 5
+   :line-item/price 1.0})
+
+(f/defactory cart
+  {:cart/created-at #(java.util.Date.)
+   :cart/line-items [line-item line-item]})
+
+(def schema
+  [{:db/ident       :line-item/description,
+    :db/valueType   :db.type/string,
+    :db/cardinality :db.cardinality/one}
+   {:db/ident       :line-item/quantity,
+    :db/valueType   :db.type/long,
+    :db/cardinality :db.cardinality/one}
+   {:db/ident       :line-item/price,
+    :db/valueType   :db.type/double,
+    :db/cardinality :db.cardinality/one}
+   {:db/ident       :cart/created-at,
+    :db/valueType   :db.type/instant,
+    :db/cardinality :db.cardinality/one}
+   {:db/ident       :cart/line-items,
+    :db/valueType   :db.type/ref,
+    :db/cardinality :db.cardinality/many}])
+
+(let [url (doto (str "datomic:mem://db" (rand-int 1e8))
+            d/create-database)
+      conn (d/connect url)]
+  @(d/transact conn schema)
+  (fd/create! conn cart))
+
+;; => {:facai.result/value
+;;     {:cart/created-at #inst "2022-03-28T11:02:19.667-00:00",
+;;      :cart/line-items [17592186045419 17592186045420],
+;;      :db/id 17592186045418},
+;;     :facai.result/linked
+;;     {[user/cart :cart/line-items 0]
+;;      {:line-item/description "Widgets",
+;;       :line-item/quantity 5,
+;;       :line-item/price 1.0,
+;;       :db/id 17592186045419},
+;;      [user/cart :cart/line-items 1]
+;;      {:line-item/description "Widgets",
+;;       :line-item/quantity 5,
+;;       :line-item/price 1.0,
+;;       :db/id 17592186045420}},
+;;     :facai.factory/id user/cart,
+;;     :db-after datomic.db.Db@9e510866}
+
+```
+
+
 ## Introduction
 
 Most application code deals with some form of "entities", often stored in a

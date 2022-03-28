@@ -12,7 +12,7 @@
  :aliases
  {:dev
   {:extra-paths ["dev"]
-   :extra-deps {com.lambdaisland/faker {:mvn/version "0.1.4"}}}
+   :extra-deps {com.lambdaisland/faker {:mvn/version "0.2.8"}}}
 
   :portal
   {:extra-deps {djblue/portal {:mvn/version "0.22.1"}}}
