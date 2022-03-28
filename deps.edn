@@ -5,9 +5,7 @@
   lambdaisland/data-printers {:mvn/version "0.7.47"}}
 
  :mvn/repos
- {"central" {:url "https://repo1.maven.org/maven2/"}
-  "clojars" {:url "https://clojars.org/repo"}
-  "my.datomic.com" {:url "https://my.datomic.com/repo"}}
+ {"my.datomic.com" {:url "https://my.datomic.com/repo"}}
 
  :aliases
  {:dev
