@@ -2,7 +2,8 @@
   "Factories for unit tests, devcards, etc."
   (:refer-clojure :exclude [def])
   (:require [lambdaisland.facai.kernel :as fk]
-            [lambdaisland.facai.macro-util :as macro-util]))
+            #?(:clj [lambdaisland.facai.macro-util :as macro-util]))
+  #?(:cljs (:require-macros [lambdaisland.facai])))
 
 (declare build-val)
 
@@ -13,9 +14,14 @@
 ;; - :facai.factory/template - the template we will build, often a map but can be anything
 ;; - :facai.factory/traits - map of traits (name -> map)
 (defrecord Factory []
-  clojure.lang.IFn
-  (invoke [this] (build-val this nil))
-  (invoke [this opts] (build-val this opts)))
+  #?@(:clj
+      (clojure.lang.IFn
+       (invoke [this] (build-val this nil))
+       (invoke [this opts] (build-val this opts)))
+      :cljs
+      (cljs.core/IFn
+       (-invoke [this] (build-val this nil))
+       (-invoke [this opts] (build-val this opts)))))
 
 (defn factory
   "Create a factory instance, these are just maps with a `(comp :type meta)` of
@@ -38,12 +44,13 @@
       (recur (assoc m :facai.factory/template x)
              xs))))
 
-(defmacro defactory [fact-name & args]
-  `(def ~fact-name
-     (binding [fk/*defer-build?* true]
-       (factory :id '~(macro-util/qualify-sym &env fact-name)
-                :resolve #(do ~fact-name)
-                ~@args))))
+#?(:clj
+   (defmacro defactory [fact-name & args]
+     `(def ~fact-name
+        (binding [fk/*defer-build?* true]
+          (factory :id '~(macro-util/qualify-sym &env fact-name)
+                   :resolve #(do ~fact-name)
+                   ~@args)))))
 
 (defn build
   ([factory]

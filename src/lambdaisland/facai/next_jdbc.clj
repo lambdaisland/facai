@@ -1,7 +1,7 @@
 (ns lambdaisland.facai.next-jdbc
   (:require [clojure.string :as str]
             [inflections.core :as inflections]
-            [lambdaisland.facai :as facai]
+            [camel-snake-kebab.core :as csk]
             [lambdaisland.facai.kernel :as fk]
             [camel-snake-kebab.core :as csk]
             [next.jdbc :as jdbc]
@@ -57,9 +57,7 @@
     (fn create!
       ([factory]
        (create! factory nil))
-      ([factory rules]
-       (create! factory rules nil))
-      ([factory rules opts]
+      ([factory opts]
        (let [ctx (merge-with #(if (map? %1) (merge %1 %2) %2)
                              ctx
                              (select-keys opts (keys ctx)))]
