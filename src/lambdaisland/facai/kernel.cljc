@@ -1,5 +1,5 @@
 (ns lambdaisland.facai.kernel
-  "Heart of the Zao factory logic
+  "Heart of the Facai factory logic
 
   This is strictly a Mechanism namespace: generic, unopinionated, verbose.
   See [[lambdaisland.facai]] for an interface meant for human consumption."
