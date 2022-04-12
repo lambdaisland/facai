@@ -8,6 +8,7 @@
   :inception-year           2022
   :description              "The ultimate factory library"
   :group-id                 "com.lambdaisland"
+  :version-qualifier        "alpha"
   :aliases-as-optional-deps [:jdbc]})
 
 ;; Local Variables:
