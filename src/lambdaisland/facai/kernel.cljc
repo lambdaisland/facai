@@ -54,7 +54,7 @@
   (cond->
       (reduce
        (fn [fact trait]
-         (merge fact (get traits trait)))
+         (merge fact (get-in traits [trait :with])))
        (if inherit
          (merge (factory-template inherit nil) template)
          template)
@@ -132,13 +132,26 @@
     :else
     {:facai.result/value tmpl}))
 
-(defn build [ctx query opts]
-  (cond
-    (factory? query)
-    (build-factory ctx query opts)
+(defn build [ctx query {selected-traits :traits :as opts}]
+  (let [ctx (cond
+              (factory? query)
+              (build-factory ctx query opts)
 
-    (deferred-build? query)
-    (build-factory ctx ((:thunk query)) (:opts query))
+              (deferred-build? query)
+              (build-factory ctx ((:thunk query)) (:opts query))
 
-    :else
-    (build-template ctx query)))
+              :else
+              (build-template ctx query))
+        traits (and (factory? query) (:facai.factory/traits query))
+        ctx (if (and traits selected-traits)
+              (reduce
+               (fn [ctx trait-key]
+                 (if-let [hook (:after-build (get traits trait-key))]
+                   (hook ctx)
+                   ctx))
+               ctx
+               selected-traits)
+              ctx)]
+    ctx (if-let [hook (:facai.factory/after-build query)]
+          (hook ctx)
+          ctx)))

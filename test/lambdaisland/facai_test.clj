@@ -49,8 +49,9 @@
    :price 9.99}
 
   :traits {:discounted
-           {:price 0.99
-            :discount "5%"}})
+           {:with
+            {:price 0.99
+             :discount "5%"}}})
 
 (deftest traits
   (is (= {:description "widget", :quantity 1, :price 0.99, :discount "5%"}
@@ -66,3 +67,29 @@
 (deftest selector-test
   (let [res (f/build post)]
     (is (= {:name "Tobi"} (f/sel1 res [:author])))))
+
+(f/defactory multiple-hooks
+  {:bar 1}
+
+  :traits
+  {:some-trait
+   {:with {:bar 2}
+    :after-build
+    (fn [ctx]
+      (f/update-result ctx update :bar inc))}}
+
+  :after-build
+  (fn [ctx]
+    (f/update-result ctx update :bar #(- %))))
+
+(deftest multiple-hooks-test
+  (is (= {:bar -1} (multiple-hooks)))
+
+  (testing "hook is applied after :with overrides"
+    (is (= {:bar -5} (multiple-hooks {:with {:bar 5}}))))
+
+  (testing "trait provides both override and hook, order is override > trait hook > top-level hook"
+    (is (= {:bar -3} (multiple-hooks {:traits [:some-trait]}))))
+
+  (testing "trait and option override, trait override is ignored but hooks fire in right order and see override value"
+    (is (= {:bar -10} (multiple-hooks {:with {:bar 9} :traits [:some-trait]})))))
