@@ -11,16 +11,14 @@
 
 # 0.2.23-alpha (2022-04-12 / 97f1b62)
 
-## Added
-
-## Fixed
-
 ## Changed
+
+- Convert to cljc (clojure+clojurescript support)
+- Drop "rules" support, will likely come back in some other form in the future
+- Version bumps
 
 # 0.1.18 (2022-03-28 / d5b5461)
 
 ## Added
 
-## Fixed
-
-## Changed
+- Initial implementation
