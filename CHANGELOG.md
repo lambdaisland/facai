@@ -2,15 +2,14 @@
 
 ## Added
 
-## Fixed
+- Added `after-build` hooks on the factory and trait level
+- Added `lambdaisland.factory/update-result` for use in hooks
 
 ## Changed
 
+- Breaking: traits now need an extra wrapping map, similar to the options map, with `:with` and optionally `:after-build`
+
 # 0.3.27-alpha (2022-05-04 / 8ab563a)
-
-## Added
-
-## Fixed
 
 ## Changed
 

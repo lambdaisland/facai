@@ -87,3 +87,8 @@
 
 (defn sel1 [result path]
   (first (sel result path)))
+
+(defn update-result
+  "Update the result value in a context map, useful in hooks."
+  [ctx f & args]
+  (apply update ctx :facai.result/value f args))
