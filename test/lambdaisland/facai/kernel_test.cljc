@@ -33,9 +33,19 @@
     (is (fk/path-match? [:a :b] :b))
     (is (fk/path-match? [:a :b `c] `c))
     (is (fk/path-match? [:a :b `c] :*))
-    (is (fk/path-match? [`my-factory] my-factory))))
+    (is (fk/path-match? [`my-factory] my-factory)))
+  (testing "can match alternatives via sets"
+    (is (fk/path-match? [:b] #{:a :b}))
+    (is (fk/path-match? [:b] [#{:a :b}]))
+    (is (fk/path-match? [:a :b :c] [#{:b} :> :*]))
+    (is (fk/path-match? [:a :b :c] [#{:a :b} :> :*]))
+    (is (not (fk/path-match? [:c :b] [#{:a :b} :> :*])))))
 
-(require 'kaocha.repl)
-(kaocha.repl/run *ns*)
+(deftest match1?-test
+  (is (fk/match1? :x :x))
+  (is (fk/match1? :x :*))
+  (is (fk/match1? :x #{:x}))
+  (is (fk/match1? `x ^{:type :facai/factory} {:facai.factory/id `x}))
+  (is (fk/match1? `x #{^{:type :facai/factory} {:facai.factory/id `x}}))
 
-(fk/path-match? [:a :b :c] [:b])
+  (is (not (fk/match1? :x :y))))

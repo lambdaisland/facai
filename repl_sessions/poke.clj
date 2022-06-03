@@ -17,7 +17,8 @@
 
 (f/defactory user
   {:type :user
-   :id rand-id})
+   :id rand-id
+   :name "Finn"})
 
 (f/defactory organization
   {:type :organization
@@ -64,3 +65,7 @@
 (keys
  (:facai.result/linked
   (f/build property-cycle-user)))
+
+(f/build property-cycle-user
+         {:rules {[user :name] "Jake"
+                  [property] {:foo "bar"}}})
