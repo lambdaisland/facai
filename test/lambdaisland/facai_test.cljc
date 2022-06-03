@@ -93,3 +93,37 @@
 
   (testing "trait and option override, trait override is ignored but hooks fire in right order and see override value"
     (is (= {:bar -10} (multiple-hooks {:with {:bar 9} :traits [:some-trait]})))))
+
+(f/defactory product
+  {:sku "123"
+   :price 12.99})
+
+(f/defactory product-line-item
+  {:product product
+   :quantity 1}
+  :traits
+  {:balloon
+   {:with
+    {:product
+     (product
+      {:with {:sku "BAL" :price 0.99}})}}}
+  :after-build
+  (fn [ctx]
+    (f/update-result
+     ctx
+     (fn [{:as res :keys [product quantity]}]
+       (assoc res :total (* (:price product) quantity))))))
+
+(deftest rules-test
+  (is (= {:product {:sku "123" :price 7.5}
+          :quantity 3
+          :total 22.5}
+         (product-line-item {:rules {:quantity 3
+                                     :price 7.5}})))
+
+  (is (= {:product {:sku "XYZ", :price 0.99}, :quantity 1, :total 0.99}
+         (product-line-item {:traits [:balloon]
+                             :rules {:sku "XYZ"}})))
+
+  (is (= {:product {:price 1}, :quantity 1, :total 1}
+         (product-line-item {:rules {:product {:price 1}}}))))

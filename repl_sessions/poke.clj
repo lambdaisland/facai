@@ -1,5 +1,6 @@
 (ns repl-sessions.poke
   (:require [lambdaisland.facai :as f]
+            [lambdaisland.facai.kernel :as fk]
             [clojure.string :as str]))
 
 (def short-words
@@ -67,5 +68,8 @@
   (f/build property-cycle-user)))
 
 (f/build property-cycle-user
-         {:rules {[user :name] "Jake"
-                  [property] {:foo "bar"}}})
+         {:rules {[user :name] cycle
+                  [property] user}})
+
+(some #(when (fk/path-match? '[repl-sessions.poke/property-cycle-user :user-id repl-sessions.poke/user :name] (key %)) (val %)) {[user :name] "Jake"
+                                                                                                                                 [property] {:foo "bar"}})

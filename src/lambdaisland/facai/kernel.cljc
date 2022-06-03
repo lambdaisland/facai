@@ -61,9 +61,12 @@
           :else
           (recur ps (cons s ss) (inc i)))))))
 
+(defn match-rules [ctx]
+  (some #(when (path-match? (:facai.build/path ctx) (key %)) (val %)) (:facai.build/rules ctx)))
+
 (defn factory-template
   [{:facai.factory/keys [template inherit traits]}
-   {with :with selected-traits :traits}]
+   {:as opts with :with selected-traits :traits}]
   (cond->
       (reduce
        (fn [fact trait]
@@ -87,40 +90,58 @@
 
 (declare build build-template)
 
-(defn build-factory* [{:facai.build/keys [path] :as ctx} factory opts]
+(defn build-factory*
+  "Handle building a factory, which means building its template, possibly adjusted
+  for traits, and doing some contextual bookkeeping so we can keep track of the
+  path within the build process."
+  [{:facai.build/keys [path] :as ctx} factory opts]
   (let [{:facai.factory/keys [id]} factory
         ctx (cond-> ctx id (push-path id))
         result (-> ctx
-                   (build-template (factory-template factory opts))
+                   (build-template (factory-template factory opts) opts)
                    (assoc :facai.factory/id id))]
     (if path
       (assoc result :facai.build/path (:facai.build/path ctx))
       result)))
 
-(defn build-factory [{:facai.hooks/keys [build-factory] :as ctx} factory opts]
+(defn build-factory
+  [{:facai.hooks/keys [build-factory] :as ctx} factory opts]
   (if build-factory
     (build-factory ctx factory opts)
     (let [{:as   result
            path  :facai.build/path
            value :facai.result/value} (build-factory* ctx factory opts)]
-      (prn path)
       (cond-> result path (add-linked path value)))))
 
-(defn build-map-entry [{:facai.hooks/keys [build-association] :as ctx} val-acc k v]
+(defn build-map-entry
+  "Handle a single entry of a map-shaped template (see [[build-template]]),
+  handles recursing into building the value, and associng the built value into
+  the result."
+  [{:facai.hooks/keys [build-association] :as ctx} val-acc k v opts]
   (if (and build-association (or (factory? v) (deferred-build? v)))
     (let [[fact opts] (if (deferred-build? v) [((:thunk v)) (:opts v)] [v nil])]
       (build-association ctx val-acc k fact opts))
-    (let [{:facai.result/keys [value linked] :as result} (build (push-path ctx k) v nil)]
-      {:facai.result/value (assoc val-acc k value)
-       :facai.result/linked linked})))
+    (let [{:as ctx path :facai.build/path} (push-path ctx k)
+          v (or (match-rules ctx) v)]
+      (let [{:facai.result/keys [value linked] :as result} (build ctx v nil)]
+        {:facai.result/value (assoc val-acc k value)
+         :facai.result/linked linked}))))
 
-(defn build-template [{:facai.build/keys [path] :as ctx} tmpl]
+(defn build-template
+  "Build a value out of a 'template'. This template is basically a data shape that
+  describes the shape of the output value. It can be a map (each value gets
+  built), a collection like a set or vector (each entry gets built), a
+  thunk (the return value gets built), or a plain value (used as is).
+
+  Factories contain templates (as well as an id, hooks, traits, etc). What you
+  pass to `facai/build` is also a template."
+  [{:facai.build/keys [path] :as ctx} tmpl opts]
   (cond
     (map? tmpl)
     (reduce-kv
      (fn [acc k v]
        (let [{:facai.result/keys [value linked]}
-             (build-map-entry ctx (:facai.result/value acc) k v)]
+             (build-map-entry ctx (:facai.result/value acc) k v opts)]
          (-> acc
              (assoc :facai.result/value value)
              (merge-linked linked))))
@@ -140,8 +161,12 @@
     :else
     {:facai.result/value tmpl}))
 
-(defn build [ctx query {selected-traits :traits :as opts}]
-  (let [ctx (cond
+(defn build [ctx query {:as opts
+                        rules :rules
+                        selected-traits :traits}]
+  (let [opts (dissoc opts :rules)
+        ctx (cond-> ctx rules (assoc :facai.build/rules rules))
+        ctx (cond
               (factory? query)
               (build-factory ctx query opts)
 
@@ -149,7 +174,7 @@
               (build-factory ctx ((:thunk query)) (:opts query))
 
               :else
-              (build-template ctx query))
+              (build-template ctx query opts))
         traits (and (factory? query) (:facai.factory/traits query))
         ctx (if (and traits selected-traits)
               (reduce
