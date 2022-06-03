@@ -48,8 +48,8 @@
             :facai.result/value {:id 1
                                  :title "POST TITLE"
                                  :author-id 1}
-            :facai.result/linked {[`post
-                                   :author]
+            :facai.result/linked {[`post :author]
                                   {:id 1
-                                   :name "Tobi"}}}
+                                   :name "Tobi"}}
+            :facai.build/path [`post]}
            (create! post)))))

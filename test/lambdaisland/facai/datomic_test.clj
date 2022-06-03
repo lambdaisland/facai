@@ -51,5 +51,5 @@
       (is (= #{:cart/created-at :cart/line-items :db/id}
              (set (keys value))))
       (is (= "Widgets"
-             (get-in linked [[`cart :cart/line-items 0]
+             (get-in linked [[`cart :cart/line-items 0 `line-item]
                              :line-item/description]))))))

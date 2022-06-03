@@ -20,7 +20,7 @@
                          insert-opts)
         pk (or (:facai.factory/primary-key fact) primary-key)
         value (merge (:facai.result/value result) row)]
-    (if (seq path)
+    (if (< 1 (count path))
       (-> result
           (assoc :facai.result/value value)
           (fk/add-linked path value)

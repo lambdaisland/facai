@@ -127,3 +127,27 @@
 
   (is (= {:product {:price 1}, :quantity 1, :total 1}
          (product-line-item {:rules {:product {:price 1}}}))))
+
+(f/defactory f-a
+  {:a #(rand-int 100)})
+
+(f/defactory f-b
+  {:a1 f-a
+   :a2 f-a
+   :b "b"})
+
+(f/defactory f-c
+  {:b1 f-b
+   :b2 f-b
+   :c "c"})
+
+(deftest unification-test
+  (is
+   (let [v (f-c {:rules {[f-a] (f/unify)}})]
+     (apply =
+            (map #(get-in v %)
+                 [
+                  [:b1 :a1 :a]
+                  [:b1 :a2 :a]
+                  [:b2 :a1 :a]
+                  [:b2 :a2 :a]])))))

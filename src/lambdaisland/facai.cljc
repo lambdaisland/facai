@@ -52,6 +52,12 @@
                    :resolve #(do ~fact-name)
                    ~@args)))))
 
+(defn unify
+  ([]
+   (unify (gensym "unify")))
+  ([id]
+   (fk/->LVar id)))
+
 (defn build
   ([factory]
    (build factory nil))

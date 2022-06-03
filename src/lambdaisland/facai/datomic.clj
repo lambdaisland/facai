@@ -12,7 +12,7 @@
                        #(cond-> %
                           (not (:db/id %))
                           (assoc :db/id (str (gensym "facai.datomic/tempid")))))]
-    (if (seq path)
+    (if (< 1 (count path))
       (-> result
           (fk/add-linked path (:facai.result/value result))
           (update :facai.result/value :db/id))

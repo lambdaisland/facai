@@ -4,10 +4,7 @@
 [![cljdoc badge](https://cljdoc.org/badge/com.lambdaisland/facai)](https://cljdoc.org/d/com.lambdaisland/facai) [![Clojars Project](https://img.shields.io/clojars/v/com.lambdaisland/facai.svg)](https://clojars.org/com.lambdaisland/facai)
 <!-- /badges -->
 
-The ultimate factory library
-
-Or it will be... this is still heavily work in progress. This library is baby.
-Stay tuned.
+Factories for fun and profit! Gongxi facai!
 
 ## Getting Started
 
@@ -22,10 +19,10 @@ we can test the UI, or to display in Devcards or notebooks.
 
 There are a few solutions to this.
 
-- Simply write out example data as EDN literals, whether it be in tests, or in
-  comments interspersed or at the bottom of the file.
-- Provide test.check style generators so you can generate values on the fly
-- Provide schema/spec-like type information, as a form of documentation, runtime
+- simply write out example data as EDN literals, whether it be in tests, or in
+  comments interspersed or at the bottom of the file
+- provide test.check style generators so you can generate values on the fly
+- provide schema/spec-like type information, as a form of documentation, runtime
   validation, and possibly to drive test.check-style generators
 
 These approaches all have value, but we think there's room for something that
@@ -35,7 +32,7 @@ approaches.
 Test.check is great at finding obscure bugs and testing the narrowest edge
 cases, it does this by deliberately generating "weird" data. Unreadable
 characters, huge data structures, nils. It's great for validating code
-properties, it's not suitable for human consumption. The data is hard to scan.
+properties, but it's not meant for human consumption. The data is hard to scan.
 As an example of what kind of data flows around in your system it's worthless.
 It's the epitome of untypical data.
 
@@ -53,13 +50,13 @@ representation, because of the amount of duplication.
 Finally we think that coming up with good example data is valuable work that
 deserves a larger payoff. The same shape of data you need for your tests can
 serve you well when testing UI, or when documenting internal APIs in repl
-sessions or notebooks. 
+sessions or notebooks.
 
 So this is what Facai factories are about. A standardized way to define
 "factories" for the various types of information that flow through your app. It
 has a bit of smarts, it knows about associations between different types of
 entities, and can integrate with the database (be it relational or datalog), to
-quickly create an insert the data you need.
+quickly create and insert the data you need.
 
 That concludes the TED talk. Let's have a quick runthrough of what all of this
 looks like.
@@ -139,10 +136,11 @@ looks like.
    :article/status :draft}
 
   :traits
-  {:published {:article/status "published"}
-   :unpublished {:article/status "unpublished"}
-   :in-the-future {:article/published-at #(fh/days-from-now 2)}
-   :in-the-past {:article/published-at #(fh/days-ago 2)}})
+  {:with
+   {:published {:article/status "published"}
+    :unpublished {:article/status "unpublished"}
+    :in-the-future {:article/published-at #(fh/days-from-now 2)}
+    :in-the-past {:article/published-at #(fh/days-ago 2)}}})
 
 (article {:traits [:published :in-the-future]})
 ;; => #:article{:title "7 Tip-top Things To Try",
@@ -207,6 +205,159 @@ looks like.
 ;;            :roles #{"author"}},
 ;;     :post/uri-slug "/post"}
 ```
+
+## Paths, Selectors, Rules, and Unification
+
+During the build process Facai keeps track of the "path" it is currently at.
+When it handles a map entry the map key is added to the path. When it handles a
+nested factory then the factory id (a fully qualified symbol) is added onto the
+path. When handling other collections the sequential index is added to the path.
+
+So for the `(article)` example above you get these successive paths:
+
+```clj
+[my-app.factories/article]
+[my-app.factories/article :article/title]
+[my-app.factories/article :article/submitter my-app.factories/user]
+[my-app.factories/article :article/submitter my-app.factories/user :user/name]
+[my-app.factories/article :article/submitter my-app.factories/user :user/name]
+[my-app.factories/article :article/submitter my-app.factories/user :user/handle]
+[my-app.factories/article :article/submitter my-app.factories/user :user/handle]
+[my-app.factories/article :article/submitter my-app.factories/user :user/email]
+[my-app.factories/article :article/submitter my-app.factories/user :user/email]
+[my-app.factories/article :article/author my-app.factories/user]
+[my-app.factories/article :article/author my-app.factories/user :user/name]
+[my-app.factories/article :article/author my-app.factories/user :user/name]
+[my-app.factories/article :article/author my-app.factories/user :user/handle]
+[my-app.factories/article :article/author my-app.factories/user :user/handle]
+[my-app.factories/article :article/author my-app.factories/user :user/email]
+[my-app.factories/article :article/author my-app.factories/user :user/email]
+[my-app.factories/article :article/author my-app.factories/user :user/roles]
+[my-app.factories/article :article/author my-app.factories/user :user/roles 0]
+```
+
+These paths can be matched with selectors, these function conceptually a lot like CSS selectors:
+
+- Selectors are vectors of keywords, symbols/factories, or numbers (indices)
+- A non-vector path `:xxx` is the same as `[:xxx]`
+- `[:foo]` matches any path that ends with `:foo`
+- `[:foo :bar]` matches any path that ends with `:bar`, and that has `:foo` somewhere before `:bar` in the path
+- `[:foo :> :bar]` matches any path that ends `:foo :bar`
+- `[#{:foo :bar}]` matches any path that ends with `:foo` or `:bar`
+
+### Selecting Associations
+
+When creating an `(article)` Facai also created two users, one of them the
+author, and one of them the submitter. You can use selectors to conveniently
+pull out these associated entities. For this you use `facai/build`, which
+returns a map with `:facai.result/value` (in this case the author), as well as
+`:facai.result/linked`, a map with any "linked" entities. With this result map
+in hand you can select linked values.
+
+```clj
+(let [result    (f/build article)
+      submitter (f/sel1 result :article/submitter)
+      author    (f/sel1 result :article/author)]
+  {:article   (f/value result)
+   :submitter submitter
+   :author    author})
+```
+
+This is quite convenient in tests, you can let a single factory generate a bunch
+of linked entities, and then you just reference the ones you need.
+
+We could also get all users:
+
+```clj
+(let [result (f/build article)]
+  (f/sel result user))
+```
+
+### Rules
+
+Selectors can also be used to pass in rules when calling a factory. This
+provides a convenient way to set deeply nested values. Rules are provided as a map from selector to value.
+
+```clj
+(article {:rules {[:article/submitter :user/handle] "editosaurus"}})
+;;=>
+{:article/title "7 Tip-top Things To Try",
+ :article/submitter
+ {:user/name "Elisa Ferry",
+  :user/handle "editosaurus",
+  :user/email "ty41@ankundingankund.net"},
+ :article/author
+ {:user/name "Amalia Sporer",
+  :user/handle "bobby",
+  :user/email "aimee24@brakusbrakusand.org",
+  :user/roles #{"author"}}}
+```
+
+### Unification
+
+As a rule value you can pass the special value `(f/unify)`. The first time such
+a rule matches, it will generate factory data as usual, any subsequent matches
+will then reuse that data. This has some really useful applications. Say we have
+a data model where many types of entities have a link back to an `organization`.
+
+```clj
+(f/defactory user
+  {:username "jonny"
+   :org organization})
+
+(f/defactory department
+  {:name "sales"
+   :org organization
+   :head user})
+
+(f/defactory meeting-room
+  {:org organization
+   :room-number "123"
+   :department department})
+
+(f/defactory booking
+  {:start-time #(java.util.Date.)
+   :booked-by user
+   :room meeting-room})
+```
+
+When asking for a `(booking)` we'll get no fewer than three different
+organizations. That doesn't really make sense, bookings are only made within a
+single organization. We can unify these as follows:
+
+```clj
+(booking {:rules {organization (f/unify)}})
+```
+
+### Hooks
+
+Factories can contain an `after-build` hook, this is function which gets called
+after we've constructed a value for that factory. It gets passed a "context"
+map, which contains among other things the `:facai.result/value`. A common use
+case is to update this value. You can use the `f/update-result` helper for that, which is a shorthand for `(update ctx :facai.result/value ...)`
+
+```clj
+(f/defactory product
+  {:sku "123"
+   :price 12.99})
+
+(f/defactory product-line-item
+  {:product product
+   :quantity 1}
+
+  :after-build
+  (fn [ctx]
+    (f/update-result
+     ctx
+     (fn [{:as res :keys [product quantity]}]
+       (assoc res :total (* (:price product) quantity))))))
+
+(product-line-item);; => {:product {:sku "123", :price 12.99}, :quantity 1, :total 12.99}
+(product-line-item {:with {:quantity 2}});; => {:product {:sku "123", :price 12.99}, :quantity 2, :total 25.98}
+(product-line-item {:rules {:price 69 :quantity 2}});; => {:product {:sku "123", :price 69}, :quantity 2, :total 138}
+```
+
+Notice how the result always has the right total price.
 
 ## Database Integration
 
