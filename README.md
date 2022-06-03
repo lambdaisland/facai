@@ -329,6 +329,14 @@ single organization. We can unify these as follows:
 (booking {:rules {organization (f/unify)}})
 ```
 
+You can pass a value to `(f/unify)` to unify across multiple rules:
+
+```clj
+(booking {:rules {:org-id (f/unify :org) :organization-id (f/unify :org)}})
+```
+
+All rules that have the same unify value will end up linking to the same value.
+
 ### Hooks
 
 Factories can contain an `after-build` hook, this is function which gets called
