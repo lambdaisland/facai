@@ -1,7 +1,7 @@
 (ns lambdaisland.facai-test
-  (:require [lambdaisland.facai :as f]
-            [lambdaisland.facai.kernel :as fk]
-            [clojure.test :refer :all]))
+  (:require [clojure.test :refer [deftest testing is are]]
+            [lambdaisland.facai :as f]
+            [lambdaisland.facai.kernel :as fk]))
 
 (f/defactory user
   {:name "Arne"})

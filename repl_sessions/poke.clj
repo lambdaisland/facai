@@ -1,39 +1,66 @@
 (ns repl-sessions.poke
-  (:require [lambdaisland.facai :as f]))
+  (:require [lambdaisland.facai :as f]
+            [clojure.string :as str]))
 
+(def short-words
+  ["bat" "bar" "cat" "dud" "lip" "map" "pap" "sip" "fig" "wip"])
 
-(f/defactory order
-  {:description "an order"}
+(defn rand-id []
+  (str/join "-"
+            (take 3
+                  (shuffle (concat (map str/upper-case short-words)
+                                   short-words)))))
 
-  :after-build
-  (fn [ctx]
-    (f/update-result ctx assoc :xxx "xxx"))
+(f/defactory cycle
+  {:type :cycle
+   :id rand-id})
 
-  :after-create
-  (fn [ctx]
-    )
+(f/defactory user
+  {:type :user
+   :id rand-id})
 
-  :traits
-  {:completed
-   {:with {:completed-at #(java.util.Date.)}
-    :after-build (fn [ctx])}
+(f/defactory organization
+  {:type :organization
+   :id rand-id})
 
-   :refunded
-   {:traits [:completed]
-    :with {:refunded-at #(java.util.Date.)}
-    :after-build (fn [ctx])}})
+(f/defactory organization-user
+  {:type :organization-user
+   :id rand-id
+   :organization-id organization
+   :user-id user})
 
-(f/build order)
+(f/defactory property
+  {:type :property
+   :id rand-id
+   :org-id organization
+   :created-by user})
 
+(f/defactory property-cycle-user
+  {:type :property-cycle-user
+   :id rand-id
+   :cycle-id cycle
+   :property-id property
+   :user-id user})
 
-(f/defactory foo
-  {:bar 1}
+(defrecord LVar [identity])
 
-  :traits
-  {:some-trait
-   {:with {:bar 2}
-    :after-build (fn [ctx]
-                   (f/update-result ctx update :bar inc))}})
+(property-cycle-user
+ {:rules {[:created-by] (->LVar :user)
+          [:user-id] (->LVar :user)
+          [:org-id] (->LVar :org)
+          [:organization-id] (->LVar :org)}})
 
-(f/build foo
-         {:traits [:some-trait]})
+(f/sel
+ (f/build property-cycle-user)
+ [:created-by])
+
+(f/sel
+ (f/build property-cycle-user)
+ [#{:user-id :created-by}])
+
+(f/sel
+ (f/build property-cycle-user)
+ [user])
+(keys
+ (:facai.result/linked
+  (f/build property-cycle-user)))

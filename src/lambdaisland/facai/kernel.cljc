@@ -22,31 +22,56 @@
   (= :facai/factory (:type (meta o))))
 
 (defn path-match? [path selector]
-  (when (seq path)
-    (loop [[p & ps] path
-           [s & ss] (if (sequential? selector) selector [:> selector])
-           i 0]
-      (let [s (if (factory? s) (:facai.factory/id s) s)]
-        (cond
-          (and (nil? p) (nil? s))
-          true
+  (let [selector (if (sequential? selector) selector [selector])
+        path (if (and (keyword? (last selector))
+                      (not (keyword? (last path))))
+               (butlast path)
+               path)]
+    (when (seq path)
+      (loop [[p & ps] path
+             [s & ss] selector
+             i        0]
+        (when (< 10 i) (throw (Exception. "too much recursion")))
+        (let [s (cond
+                  (factory? s)
+                  (:facai.factory/id s)
+                  (set? s)
+                  (into #{}
+                        (map #(if (factory? %) (:facai.factory/id %) %))
+                        s)
+                  :else
+                  s)]
+          (cond
+            (and (nil? p) (nil? s))
+            true
 
-          (or (nil? p) (nil? s))
-          false
+            (or (nil? p) (nil? s))
+            false
 
-          (or (= s p) (= s :*))
-          (if (and (seq ss) (seq ps))
-            (recur ps ss (inc i))
-            (and (empty? ss) (empty? ps)))
+            (or (= s p)
+                (and (set? s) (contains? s p)))
+            (if (and (seq ps) (seq ss))
+              (recur ps ss (inc i))
+              (and (empty? ps) (empty? ss)))
 
+            (= s :*)
+            (cond
+              ;; consume :* and continue
+              (and (seq ss) (seq ps))
+              (or (path-match? ps ss)
+                  (path-match? ps (cons :* ss)))
+              ;; matched last element, return true
+              (empty? ss)  true
 
-          (= s :>)
-          (if (= (first ss) p)
-            (recur ps (next ss) (inc i))
-            false)
+              :else                         (path-match? ps (cons :* ss)))
 
-          :else
-          (recur ps (cons s ss) (inc i)))))))
+            (= s :>)
+            (if (= (first ss) p)
+              (recur ps (next ss) (inc i))
+              false)
+
+            :else
+            (recur ps (cons s ss) (inc i))))))))
 
 (defn factory-template
   [{:facai.factory/keys [template inherit traits]}
@@ -74,29 +99,24 @@
 
 (declare build build-template)
 
-(defn run-hook [hook ctx result]
-  (if-let [hook-fn (get ctx hook)]
-    (hook-fn ctx result)))
-
-(defn build-factory* [{:facai.hooks/keys [build-factory]
-                       :facai.build/keys [path] :as ctx} factory opts]
+(defn build-factory* [{:facai.build/keys [path] :as ctx} factory opts]
   (let [{:facai.factory/keys [id]} factory
         ctx (cond-> ctx id (push-path id))
         result (-> ctx
                    (build-template (factory-template factory opts))
                    (assoc :facai.factory/id id))]
     (if path
-      (assoc result :facai.build/path path)
+      (assoc result :facai.build/path (:facai.build/path ctx))
       result)))
 
-(defn build-factory [{:facai.hooks/keys [build-factory]
-                      :facai.build/keys [path] :as ctx} factory opts]
+(defn build-factory [{:facai.hooks/keys [build-factory] :as ctx} factory opts]
   (if build-factory
     (build-factory ctx factory opts)
-    (let [result (build-factory* ctx factory opts)]
-      (cond-> result
-        path
-        (add-linked path (:facai.result/value result))))))
+    (let [{:as   result
+           path  :facai.build/path
+           value :facai.result/value} (build-factory* ctx factory opts)]
+      (prn path)
+      (cond-> result path (add-linked path value)))))
 
 (defn build-map-entry [{:facai.hooks/keys [build-association] :as ctx} val-acc k v]
   (if (and build-association (or (factory? v) (deferred-build? v)))
