@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.lambdaisland</groupId>
   <artifactId>facai</artifactId>
-  <version>0.4.32-alpha</version>
+  <version>0.5.41-alpha</version>
   <name>facai</name>
   <description>The ultimate factory library</description>
   <url>https://github.com/lambdaisland/facai</url>
@@ -25,7 +25,7 @@
     <url>https://github.com/lambdaisland/facai</url>
     <connection>scm:git:git://github.com/lambdaisland/facai.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/lambdaisland/facai.git</developerConnection>
-    <tag>f22b116210c93acc59ad6624ce2d7fa66bca1192</tag>
+    <tag>75c651895f5f68f75267b6b56d5aaf2c6f4a2187</tag>
   </scm>
   <dependencies>
     <dependency>
@@ -47,7 +47,7 @@
     <dependency>
       <groupId>camel-snake-kebab</groupId>
       <artifactId>camel-snake-kebab</artifactId>
-      <version>0.4.2</version>
+      <version>0.4.3</version>
       <optional>true</optional>
     </dependency>
     <dependency>
@@ -90,7 +90,7 @@
         <configuration>
           <archive>
             <manifestEntries>
-              <git-revision>f22b116210c93acc59ad6624ce2d7fa66bca1192</git-revision>
+              <git-revision>75c651895f5f68f75267b6b56d5aaf2c6f4a2187</git-revision>
             </manifestEntries>
           </archive>
         </configuration>
