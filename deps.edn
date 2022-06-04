@@ -13,21 +13,21 @@
    :extra-deps {com.lambdaisland/faker {:mvn/version "0.2.8"}}}
 
   :portal
-  {:extra-deps {djblue/portal {:mvn/version "0.23.0"}}}
+  {:extra-deps {djblue/portal {:mvn/version "0.26.0"}}}
 
   :clerk
   {:extra-paths ["notebooks"]
-   :extra-deps {io.github.nextjournal/clerk {:mvn/version "0.6.387"}}}
+   :extra-deps {io.github.nextjournal/clerk {:mvn/version "0.8.445"}}}
 
   :jdbc
   {:extra-deps {com.github.seancorfield/next.jdbc {:mvn/version "1.2.780"}
-                camel-snake-kebab/camel-snake-kebab {:mvn/version "0.4.2"}
+                camel-snake-kebab/camel-snake-kebab {:mvn/version "0.4.3"}
                 inflections/inflections {:mvn/version "0.13.2"}
                 com.h2database/h2 {:mvn/version "2.1.212"}}}
 
   :cljs
-  {:extra-deps {org.clojure/clojurescript {:mvn/version "1.11.4"}
-                thheller/shadow-cljs {:mvn/version "2.18.0"}}}
+  {:extra-deps {org.clojure/clojurescript {:mvn/version "1.11.54"}
+                thheller/shadow-cljs {:mvn/version "2.19.1"}}}
 
   :spec
   {:extra-deps {org.clojure/spec.alpha {:mvn/version "0.3.218"}}}
@@ -46,4 +46,4 @@
 
   :test
   {:extra-paths ["test"]
-   :extra-deps  {lambdaisland/kaocha {:mvn/version "1.65.1029"}}}}}
+   :extra-deps  {lambdaisland/kaocha {:mvn/version "1.66.1034"}}}}}
