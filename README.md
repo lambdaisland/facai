@@ -115,8 +115,7 @@ looks like.
 
 (f/defactory user
   {:user/name   "Lilliam Predovic"
-   :user/handle (fh/numbered
- #(str "lilli" %))
+   :user/handle (fh/numbered #(str "lilli" %))
    :user/email  #(str "lilli" (rand-int 100) "@example.com")})
 
 ;; The Faker library can also be useful, especially if you want to for instance
@@ -148,7 +147,8 @@ looks like.
 ;;              :published-at
 ;;              #object[java.time.ZonedDateTime 0x345be9a1 "2022-03-30T10:09:17.584903790Z[UTC]"]}
 
-;; If you have associations between data, then you simply use the factory as the value. Or if you want to set some specifics with `:with` or `:traits` you can call the factories.
+;; If you have associations between data, then you simply use the factory as the value.
+;; Or if you want to set some specifics with `:with` or `:traits` you can call the factories.
 
 (f/defactory article
   {:article/title "7 Tip-top Things To Try"
@@ -184,9 +184,9 @@ looks like.
 ;;                     :email "laurine@lockmanlockmana.info",
 ;;                     :roles #{"author"}}}
 
+
 ;; Factories can inherit from other factories. Often it's preferrable to use
 ;; traits, but this can be a useful feature.
-
 
 (f/defactory blog-post
   :inherit article
