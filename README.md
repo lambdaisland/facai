@@ -342,7 +342,8 @@ All rules that have the same unify value will end up linking to the same value.
 Factories can contain an `after-build` hook, this is function which gets called
 after we've constructed a value for that factory. It gets passed a "context"
 map, which contains among other things the `:facai.result/value`. A common use
-case is to update this value. You can use the `f/update-result` helper for that, which is a shorthand for `(update ctx :facai.result/value ...)`
+case is to update this value. You can use the `f/update-result` helper for that,
+which is a shorthand for `(update ctx :facai.result/value ...)`
 
 ```clj
 (f/defactory product
