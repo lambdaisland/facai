@@ -40,16 +40,16 @@
 
 (deftest basic-jdbc-persistence-test
   (let [ds (nj/get-datasource (make-h2-url (str "h2-db-" (rand-int 1e8))))
-        create! (fnj/create-fn {:facai.next-jdbc/ds ds
-                                :facai.next-jdbc/fk-col-fn #(keyword (str (name %) "-id"))})]
+        jdbc-opts {::fnj/ds ds
+                   ::fnj/fk-col-fn #(keyword (str (name %) "-id"))}]
     (run! #(nj/execute! ds [(create-table-sql %)]) table-defs)
 
-    (is (= {:facai.factory/id `post
-            :facai.result/value {:id 1
-                                 :title "POST TITLE"
-                                 :author-id 1}
-            :facai.result/linked {[`post :author]
-                                  {:id 1
-                                   :name "Tobi"}}
-            :facai.build/path [`post]}
-           (create! post)))))
+    (let [result (fnj/create! jdbc-opts post)]
+      (is (= {:id 1
+              :title "POST TITLE"
+              :author-id 1}
+             (:facai.result/value result)))
+
+      (is (= '{[lambdaisland.facai.jdbc-test/post :author lambdaisland.facai.jdbc-test/user] {:name "Tobi", :id 1}
+               [lambdaisland.facai.jdbc-test/post] {:title "POST TITLE", :id 1, :author-id 1}}
+             (:facai.result/linked result))))))

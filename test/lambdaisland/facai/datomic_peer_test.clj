@@ -1,7 +1,7 @@
-(ns lambdaisland.facai.datomic-test
+(ns lambdaisland.facai.datomic-peer-test
   (:require [datomic.api :as d]
             [lambdaisland.facai :as f]
-            [lambdaisland.facai.datomic :as fd]
+            [lambdaisland.facai.datomic-peer :as fd]
             [lambdaisland.facai.kernel :as fk]
             [clojure.test :refer :all]))
 
@@ -47,9 +47,11 @@
         conn (d/connect url)]
     @(d/transact conn schema)
     (let [{:facai.result/keys [linked value]
-           :keys [db-after]} (fd/create! conn cart)]
+           ::fd/keys [db-after]
+           :as res} (fd/create! conn cart)]
       (is (= #{:cart/created-at :cart/line-items :db/id}
              (set (keys value))))
       (is (= "Widgets"
              (get-in linked [[`cart :cart/line-items 0 `line-item]
-                             :line-item/description]))))))
+                             :line-item/description])))
+      (is (= "Widgets" (get (fd/entity res [:cart/line-items 0]) :line-item/description))))))

@@ -44,6 +44,9 @@
   :datomic-free
   {:extra-deps  {com.datomic/datomic-free {:mvn/version "0.9.5703.21"}}}
 
+  :xtdb
+  {:extra-deps {com.xtdb/xtdb-core {:mvn/version "1.21.0"}}}
+
   :test
   {:extra-paths ["test"]
    :extra-deps  {lambdaisland/kaocha {:mvn/version "1.66.1034"}}}}}

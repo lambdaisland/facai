@@ -45,7 +45,11 @@
              xs))))
 
 #?(:clj
-   (defmacro defactory [fact-name & args]
+   (defmacro defactory
+     "Factory convenience macro. Takes a name and keyword-value pairs, if a keyword
+  is omitted then the value is treated as the factory template. Simple keywords
+  are namespaced to `facai.factory`."
+     [fact-name & args]
      `(def ~fact-name
         (binding [fk/*defer-build?* true]
           (factory :id '~(macro-util/qualify-sym &env fact-name)
@@ -53,18 +57,27 @@
                    ~@args)))))
 
 (defn unify
+  "Use in rules to signify that certain parts of the build tree should be unified,
+  i.e. that they should share the same value. It plays a similar role as an lvar
+  in logic programming. Invocations without arguments return unique lvars,
+  invocations with an id argument are idempotent, allowing unification across
+  multiple rules with the same lvar."
   ([]
    (unify (gensym "unify")))
   ([id]
    (fk/->LVar id)))
 
 (defn build
+  "Build the given factory or template, returns a result map with
+  `:facai.result/value` and `:facai.result/linked`."
   ([factory]
    (build factory nil))
   ([factory opts]
    (fk/build nil factory opts)))
 
 (defn build-val
+  "Build the given factory or template, returns the result value, discarding the
+  linked entities."
   ([factory]
    (build-val factory nil))
   ([factory opts]
@@ -73,6 +86,7 @@
      (:facai.result/value (fk/build nil factory opts)))))
 
 (defn build-all
+  "Build the given factory or template. Returns a sequence of all entities that were built."
   ([factory]
    (build-all factory nil))
   ([factory rules]
@@ -82,17 +96,25 @@
          (fk/build nil factory opts)]
      (into [value] (map :value linked)))))
 
-(defn value [result]
+(defn value
+  "Given the result map returned by [[build]], retrieve the built value."
+  [result]
   (:facai.result/value result))
 
-(defn sel [result selector]
+(defn sel
+  "Given the result map returned by [[build]], return any entities that match the
+  given selector."
+  [result selector]
   (let [selector (if (vector? selector) selector [selector])]
     (keep #(when (fk/path-match? (key %) selector)
              (val %))
           (:facai.result/linked result))))
 
-(defn sel1 [result path]
-  (first (sel result path)))
+(defn sel1
+  "Given the result map returned by [[build]], return the first entity that
+  matches the given selector."
+  [result selector]
+  (first (sel result selector)))
 
 (defn update-result
   "Update the result value in a context map, useful in hooks."

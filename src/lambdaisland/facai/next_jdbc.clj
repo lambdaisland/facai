@@ -9,10 +9,10 @@
             [next.jdbc.quoted :as quoted]
             [next.jdbc.result-set :as result-set]))
 
-(defn build-factory [{:facai.next-jdbc/keys [ds primary-key table-fn insert-opts quote-fn]
+(defn build-factory [{::keys [ds primary-key table-fn insert-opts quote-fn]
                       :facai.build/keys [path]
                       :as ctx} fact opts]
-  (let [table (quote-fn (or (:facai.next-jdbc/table fact)
+  (let [table (quote-fn (or (::table fact)
                             (table-fn fact)))
         result (fk/build-factory* ctx fact opts)
         row (sql/insert! ds table
@@ -27,7 +27,7 @@
           (update :facai.result/value get pk))
       (assoc result :facai.result/value value))))
 
-(defn build-association [{:facai.next-jdbc/keys [fk-col-fn] :as ctx} acc k fact opts]
+(defn build-association [{::keys [fk-col-fn] :as ctx} acc k fact opts]
   (let [ctx (fk/push-path ctx k)
         {:facai.result/keys [value linked] :as result}
         (fk/build-factory ctx fact opts)]
@@ -39,21 +39,19 @@
     (result-set/as-modified-maps rs (assoc opts :qualifier-fn (constantly nil) :label-fn kebab))))
 
 (defn table-fn [fact]
-  (inflections/plural (name (:facai.factory/id fact))))
+  (inflections/plural (name (fk/factory-id fact))))
 
 (def default-ctx
-  {:facai.hooks/build-association build-association
-   :facai.hooks/build-factory build-factory
-   :facai.next-jdbc/primary-key :id
-   :facai.next-jdbc/quote-fn quoted/ansi
-   :facai.next-jdbc/table-fn table-fn
-   :facai.next-jdbc/fk-col-fn identity
-   :facai.next-jdbc/insert-opts {:builder-fn as-kebab-maps
-                                 :column-fn csk/->snake_case_string}})
+  {::primary-key :id
+   ::quote-fn quoted/ansi
+   ::table-fn table-fn
+   ::fk-col-fn identity
+   ::insert-opts {:builder-fn as-kebab-maps
+                  :column-fn (comp quoted/ansi csk/->snake_case_string)}})
 
 (defn create-fn [ctx]
   (let [ctx (merge-with #(if (map? %1) (merge %1 %2) %2) default-ctx ctx)
-        ctx (update-in ctx [:facai.next-jdbc/insert-opts :column-fn] #(comp (:facai.next-jdbc/quote-fn ctx) %))]
+        ctx (update-in ctx [::insert-opts :column-fn] #(comp (::quote-fn ctx) %))]
     (fn create!
       ([factory]
        (create! factory nil))
@@ -62,3 +60,34 @@
                              ctx
                              (select-keys opts (keys ctx)))]
          (fk/build ctx factory opts))))))
+
+(defn create!
+  ([jdbc-opts factory]
+   (create! jdbc-opts factory nil))
+  ([jdbc-opts factory opts]
+   (let [ctx (merge
+              default-ctx
+              (if (::ds jdbc-opts)
+                jdbc-opts
+                {::ds jdbc-opts}))]
+     (fk/build ctx factory
+               (-> opts
+                   (update :association-key (fnil comp identity)
+                           (fn [{::keys [fk-col-fn]} k]
+                             (fk-col-fn k)))
+                   (update :after-build-factory (fnil comp identity)
+                           (fn [{::keys [ds primary-key table-fn insert-opts quote-fn]
+                                 :facai.result/keys [value]
+                                 :facai.build/keys [path]
+                                 factory :facai.build/input
+                                 :as ctx}]
+                             (let [table (quote-fn (or (::table factory)
+                                                       (table-fn factory)))
+                                   row (sql/insert! ds table value insert-opts)
+                                   pk (or (:facai.factoryory/primary-key factory) primary-key)
+                                   value (merge (:facai.result/value ctx) row)]
+                               (-> ctx
+                                   (assoc :facai.result/value (if (< 1 (count path))
+                                                                (get value pk)
+                                                                value))
+                                   (fk/add-linked path value))))))))))

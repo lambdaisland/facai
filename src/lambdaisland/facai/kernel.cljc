@@ -76,7 +76,6 @@
           (recur ps (cons s ss) (inc i)))))))
 
 (defn match-rules [ctx]
-  (prn (:facai.build/path ctx))
   (some #(when (path-match? (:facai.build/path ctx) (key %))
            (let [v (val %)]
              (if (lvar? v)
@@ -102,11 +101,27 @@
   (assert segment)
   (update ctx :facai.build/path (fnil conj []) segment))
 
-(defn add-linked [result path entity]
-  (update result :facai.result/linked (fnil assoc {}) path entity))
+(defn add-linked
+  "Add a new entry to the `:facai.result/linked` map. If there is already an entry
+  for the given path then this is a no-op, this allows persistence
+  implemenentation to do their own custom linked handling in a hook."
+  [result path entity]
+  (if (get-in result [:facai.result/linked path])
+    result
+    (update result :facai.result/linked (fnil assoc {}) path entity)))
 
 (defn merge-linked [result linked]
   (update result :facai.result/linked merge linked))
+
+(defn handle-hook
+  ([ctx hook]
+   (if-let [h (get ctx hook)]
+     (h ctx)
+     ctx))
+  ([ctx hook value]
+   (if-let [h (get ctx hook)]
+     (h ctx value)
+     value)))
 
 (declare build build-template)
 
@@ -124,26 +139,43 @@
       result)))
 
 (defn build-factory
-  [{:facai.hooks/keys [build-factory] :as ctx} factory opts]
-  (if build-factory
-    (build-factory ctx factory opts)
-    (let [{:as   result
-           path  :facai.build/path
-           value :facai.result/value} (build-factory* ctx factory opts)]
-      (cond-> result path (add-linked path value)))))
+  [{:as ctx}
+   {:as factory, traits :facai.factory/traits}
+   {:as opts, selected-traits :traits}]
+  (-> (let [{:as ctx} (handle-hook ctx :facai.hooks/before-build-factory)
+            {:as   ctx
+             path  :facai.build/path
+             value :facai.result/value} (-> ctx
+                                            (build-factory* factory opts))
+            ctx (if (and traits selected-traits)
+                  (reduce
+                   (fn [ctx trait-key]
+                     (if-let [hook (:after-build (get traits trait-key))]
+                       (hook ctx)
+                       ctx))
+                   ctx
+                   selected-traits)
+                  ctx)
+            ctx (if-let [hook (:facai.factory/after-build factory)]
+                  (hook ctx)
+                  ctx)
+            ctx (handle-hook ctx :facai.hooks/after-build-factory)]
+        (cond-> ctx path (add-linked path (:facai.result/value ctx))))))
 
 (defn build-map-entry
   "Handle a single entry of a map-shaped template (see [[build-template]]),
   handles recursing into building the value, and associng the built value into
   the result."
-  [{:facai.hooks/keys [build-association] :as ctx} val-acc k v opts]
-  (if (and build-association (or (factory? v) (deferred-build? v)))
-    (let [[fact opts] (if (deferred-build? v) [((:thunk v)) (:opts v)] [v nil])]
-      (build-association ctx val-acc k fact opts))
-    (let [{:as ctx path :facai.build/path} (push-path ctx k)]
-      (let [{:facai.result/keys [value linked] :as result} (build ctx v nil)]
-        {:facai.result/value (assoc val-acc k value)
-         :facai.result/linked linked}))))
+  [{:as ctx} val-acc k v opts]
+  (let [{:as ctx path :facai.build/path} (push-path ctx k)
+        {:facai.result/keys [value linked] :as result} (build ctx v nil)]
+    (-> ctx
+        (assoc :facai.result/value (assoc val-acc (cond->> k
+                                                    (factory-id v)
+                                                    (handle-hook ctx :facai.hooks/association-key))
+                                          value)
+               :facai.result/linked linked)
+        (handle-hook :facai.hooks/after-build-map-entry))))
 
 (defn build-template
   "Build a value out of a 'template'. This template is basically a data shape that
@@ -153,7 +185,8 @@
 
   Factories contain templates (as well as an id, hooks, traits, etc). What you
   pass to `facai/build` is also a template."
-  [{:facai.build/keys [path] :as ctx} tmpl opts]
+  [{:as ctx
+    :facai.build/keys [path]} tmpl opts]
   (cond
     (map? tmpl)
     (reduce-kv
@@ -163,30 +196,42 @@
          (-> acc
              (assoc :facai.result/value value)
              (merge-linked linked))))
-     {:facai.result/value {}}
+     (assoc ctx :facai.result/value (empty tmpl))
      tmpl)
 
     (coll? tmpl)
     (let [results (map-indexed (fn [idx qry]
                                  (build (push-path ctx idx) qry nil))
                                tmpl)]
-      {:facai.result/value (into (empty tmpl) (map :facai.result/value) results)
-       :facai.result/linked (transduce (map :facai.result/linked) merge results)})
+      (assoc
+       ctx
+       :facai.result/value (into (empty tmpl) (map :facai.result/value) results)
+       :facai.result/linked (transduce (map :facai.result/linked) merge results)))
 
     (fn? tmpl)
     (build ctx (tmpl) nil)
 
     :else
-    {:facai.result/value tmpl}))
+    (assoc ctx :facai.result/value tmpl)))
+
+(defn extract-hooks [ctx opts hooks]
+  (reduce
+   (fn [ctx h]
+     (if-let [f (get opts h)]
+       (assoc ctx (keyword "facai.hooks" (name h)) f)
+       ctx))
+   ctx
+   hooks))
 
 (defn build
   "Top-level build API, also used when recursing. Handles three cases: factory,
   deferred-build, template. Handles hooks and trait-hooks."
-  [ctx query {:as opts
+  [ctx input {:as opts
               rules :rules
               selected-traits :traits}]
   (let [opts (dissoc opts :rules)
         lvar-store (:facai.build/!lvars ctx (volatile! {}))
+        ctx (assoc ctx :facai.build/input input)
         ctx (cond-> ctx
               (not (:facai.build/!lvars ctx))
               (assoc :facai.build/!lvars lvar-store)
@@ -194,32 +239,30 @@
               rules
               (assoc :facai.build/rules rules)
 
-              (or (deferred-build? query) (factory? query))
-              (push-path (factory-id query)))
-        rule (match-rules ctx)
-        query (if (and rule (not (lvar? rule)))
-                rule
-                query)
-        ctx (cond
-              (factory? query)
-              (build-factory ctx query opts)
+              (or (deferred-build? input) (factory? input))
+              (push-path (factory-id input))
 
-              (deferred-build? query)
-              (build-factory ctx ((:thunk query)) (:opts query))
+              :->
+              (extract-hooks opts [:after-build
+                                   :association-key
+                                   :before-build-factory
+                                   :after-build-factory
+                                   :after-build-map-entry]))
+        rule (match-rules ctx)
+        input (if (and rule (not (lvar? rule)))
+                rule
+                input)
+        ctx (cond
+              (factory? input)
+              (build-factory ctx input opts)
+
+              (deferred-build? input)
+              (build-factory ctx ((:thunk input)) (:opts input))
 
               :else
-              (build-template ctx query opts))
-        traits (and (factory? query) (:facai.factory/traits query))
-        ctx (if (and traits selected-traits)
-              (reduce
-               (fn [ctx trait-key]
-                 (if-let [hook (:after-build (get traits trait-key))]
-                   (hook ctx)
-                   ctx))
-               ctx
-               selected-traits)
-              ctx)
-        result (if-let [hook (:facai.factory/after-build query)]
+              (build-template ctx input opts))
+        ;; hook passed-in as option
+        result (if-let [hook (:facai.hooks/after-build ctx)]
                  (hook ctx)
                  ctx)]
     (when (lvar? rule)

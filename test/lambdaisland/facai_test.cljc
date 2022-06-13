@@ -146,8 +146,7 @@
    (let [v (f-c {:rules {[f-a] (f/unify)}})]
      (apply =
             (map #(get-in v %)
-                 [
-                  [:b1 :a1 :a]
+                 [[:b1 :a1 :a]
                   [:b1 :a2 :a]
                   [:b2 :a1 :a]
                   [:b2 :a2 :a]])))))

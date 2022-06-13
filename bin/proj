@@ -9,7 +9,7 @@
   :description              "The ultimate factory library"
   :group-id                 "com.lambdaisland"
   :version-qualifier        "alpha"
-  :aliases-as-optional-deps [:jdbc]})
+  :aliases-as-optional-deps [:jdbc :xtdb :datomic-free]})
 
 ;; Local Variables:
 ;; mode:clojure
