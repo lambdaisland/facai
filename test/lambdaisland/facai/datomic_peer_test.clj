@@ -1,9 +1,9 @@
 (ns lambdaisland.facai.datomic-peer-test
-  (:require [datomic.api :as d]
+  (:require [clojure.test :refer :all]
+            [datomic.api :as d]
             [lambdaisland.facai :as f]
             [lambdaisland.facai.datomic-peer :as fd]
-            [lambdaisland.facai.kernel :as fk]
-            [clojure.test :refer :all]))
+            [lambdaisland.facai.kernel :as fk]))
 
 (d/create-database "datomic:mem://foo")
 (def conn (d/connect "datomic:mem://foo"))

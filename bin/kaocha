@@ -1,2 +1,2 @@
 #!/bin/bash
-clojure -A:test:jdbc:datomic-free -m kaocha.runner "$@"
+clojure -A:test:jdbc:datomic-free:xtdb -m kaocha.runner "$@"
