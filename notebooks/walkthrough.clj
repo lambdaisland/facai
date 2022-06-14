@@ -1,7 +1,8 @@
 (ns notebooks.walkthrough
   (:require [lambdaisland.facai :as f]
-            [lambdaisland.faker :as faker :refer [fake]]))
-
+            [lambdaisland.faker :as faker :refer [fake]]
+            [lambdaisland.facai.xtdb :as facai-xt]
+            [xtdb.api :as xt]))
 
 ;; # 🧧 Factories for Fun and Profit. 恭喜發財
 
@@ -108,8 +109,70 @@
 ;; Now when you build an "enrollment", it follows the various associations, so
 ;; it generates a student, course, and institution as well.
 
-(f/build-val
- enrollment
- {:after-build-factory
-  (fn [ctx]
-    (f/update-result ctx assoc :xt/db (random-uuid)))})
+(enrollment)
+
+;; So far hopefully this all hasn't been too surprising, what we've shown so far
+;; can be done with fairly little straightforward Clojure code. Now let's look
+;; at what actually sets these factories apart.
+
+;; There are two sets of features that make Facai a valuable tool, one is
+;; database support, the other is allowing fine-grained declarative mechanisms
+;; for generating specific shapes of data.
+
+;; Factories are typically used in combination with a database, so you can easily
+;; insert some fixture data, which you can then leverage in your tests. Facai
+;; currently has support for XTDB, Datomic Peer (Free or Pro), and relational
+;; databases through next.jdbc.
+
+;; When setting up fixture data for tests you'll find that much of it is
+;; boilerplate. You might need a user, profile, or tenant to satisfy some
+;; constraints, but for the test at hand it really doesn't matter which specific
+;; user, profile, or tenant it is. On the other hand some things very much do
+;; matter. If you are testing that discounts on a shopping cart are calculated
+;; correctly, then what's in the cart and the applied discount are essential
+;; inputs to the test.
+
+;; The idea with factories is that in your tests you specify exactly and only
+;; the pieces of information that are relevant to the test, and let everything
+;; else be provided by the factories. To help with this there are traits, hooks,
+;; and selectors.
+
+;; Let's look at these in turn:
+
+;; ## Database Support
+
+;; I'll use XTDB here. Since it's schema-on-read it requires the least setup for
+;; demonstration.
+
+;; This starts an in-memory xtdb database:
+
+^{:nextjournal.clerk/viewer nextjournal.clerk.viewer/hide-result}
+(def node (xt/start-node {}))
+
+;; Now we can use Facai to populate it with data:
+
+(def result (facai-xt/create! node enrollment))
+
+;; This returns a Facai result map, just like `f/build`, but notice how the
+;; values now have a `:xt/id`. For each database we support there is a separate
+;; `create!` function which takes an implementatation-specific reference to the
+;; database and a factory/template. Any entities will be inserted, and if the
+;; database assigns any default values, then you'll get those back as well. For
+;; instance if you have an auto-increment key in a relational database, then
+;; you'll see the assigned numbers in your result.
+
+;; Facai has some helpers to find specific entities in the result. This uses
+;; selectors which we'll discuss later. For now what you need to know is that
+;; the factory itself functions as a selector that finds all entities built by
+;; that factory.
+
+(f/sel result course)
+(f/sel result student)
+
+;; Notice how this enrollment is no longer a nested map, but a flat structure
+;; with UUID references, since that's how this structure gets represented in the
+;; database.
+
+(f/sel result enrollment)
+
+;; ## Traits

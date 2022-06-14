@@ -43,7 +43,7 @@
   "Based on a factory/template, persist all entities in the given XTDB node.
   Returns a result map."
   ([node template]
-   (create! node template))
+   (create! node template nil))
   ([node template opts]
    (let [result (build template opts)]
      (->> result
