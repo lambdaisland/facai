@@ -1,4 +1,4 @@
-# Unreleased
+# 0.6.52-alpha (2022-07-12 / 509ba20)
 
 ## Changed
 
