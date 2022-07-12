@@ -5,9 +5,6 @@
             [lambdaisland.facai.datomic-peer :as fd]
             [lambdaisland.facai.kernel :as fk]))
 
-(d/create-database "datomic:mem://foo")
-(def conn (d/connect "datomic:mem://foo"))
-
 (defn s [sname type & {:as opts}]
   (merge
    {:db/ident sname
