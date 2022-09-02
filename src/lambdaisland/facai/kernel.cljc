@@ -52,7 +52,8 @@
 (defn path-match? [path selector]
   (let [selector (if (sequential? selector) selector [selector])
         path (if (and (not (or (symbol? (last selector))
-                               (factory? (last selector))))
+                               (factory? (last selector))
+                               (= :* (last selector))))
                       (symbol? (last path)))
                (butlast path)
                path)]
