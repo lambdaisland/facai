@@ -14,6 +14,18 @@
 (defn defer [thunk opts]
   (->DeferredBuild thunk opts))
 
+(defn factory? [o]
+  (= :facai/factory (:type (meta o))))
+
+(defn unwrap [{:keys [thunk]}]
+  (cond
+    (var? thunk)
+    @thunk
+    (factory? thunk)
+    thunk
+    :else
+    (thunk)))
+
 (defn deferred-build? [o]
   (instance? DeferredBuild o))
 
@@ -22,15 +34,12 @@
 
 (declare build)
 
-(defn factory? [o]
-  (= :facai/factory (:type (meta o))))
-
 (defn factory-id [f]
   (cond
     (factory? f)
     (:facai.factory/id f)
     (deferred-build? f)
-    (:facai.factory/id ((:thunk f)))))
+    (:facai.factory/id (unwrap f))))
 
 (defn match1? [p s]
   (or (= s p)
@@ -142,7 +151,9 @@
   [{:as ctx}
    {:as factory, traits :facai.factory/traits}
    {:as opts, selected-traits :traits}]
-  (-> (let [{:as ctx} (handle-hook ctx :facai.hooks/before-build-factory)
+  (-> (let [;; for hooks, like input, but guaranteed to be unwrapped
+            ctx (assoc ctx :facai.build/factory factory)
+            {:as ctx} (handle-hook ctx :facai.hooks/before-build-factory)
             {:as   ctx
              path  :facai.build/path
              value :facai.result/value} (-> ctx
@@ -196,7 +207,9 @@
          (-> acc
              (assoc :facai.result/value value)
              (merge-linked linked))))
-     (assoc ctx :facai.result/value (empty tmpl))
+     (assoc ctx :facai.result/value (if (record? tmpl)
+                                      tmpl
+                                      (empty tmpl)))
      tmpl)
 
     (coll? tmpl)
@@ -257,7 +270,7 @@
               (build-factory ctx input opts)
 
               (deferred-build? input)
-              (build-factory ctx ((:thunk input)) (:opts input))
+              (build-factory ctx (unwrap input) (:opts input))
 
               :else
               (build-template ctx input opts))

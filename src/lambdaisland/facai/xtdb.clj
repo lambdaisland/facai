@@ -27,7 +27,7 @@
                  v))))))
 
 (defn build
-  "Like `lambdaisland.facai/build`, but returns data that is suitable for
+  "Like [[lambdaisland.facai/build]] but returns data that is suitable for
   transacting into XTDB."
   ([template]
    (build template nil))
