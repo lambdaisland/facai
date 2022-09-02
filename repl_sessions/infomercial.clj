@@ -190,7 +190,7 @@
 
   :after-build
   (fn [ctx]
-    (f/update-result
+    (f/update-value
      ctx
      (fn [{:as res :keys [product quantity]}]
        (assoc res :total (* (:price product) quantity))))))
