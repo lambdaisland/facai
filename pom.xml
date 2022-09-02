@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.lambdaisland</groupId>
   <artifactId>facai</artifactId>
-  <version>0.6.52-alpha</version>
+  <version>0.7.59-alpha</version>
   <name>facai</name>
   <description>The ultimate factory library</description>
   <url>https://github.com/lambdaisland/facai</url>
@@ -25,7 +25,7 @@
     <url>https://github.com/lambdaisland/facai</url>
     <connection>scm:git:git://github.com/lambdaisland/facai.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/lambdaisland/facai.git</developerConnection>
-    <tag>7ccb14fe226d766bcbb2377f3e472fdd74eb74e8</tag>
+    <tag>b955ecd9d579fc30283eb18d1e9d2a34abd03ce5</tag>
   </scm>
   <dependencies>
     <dependency>
@@ -102,7 +102,7 @@
         <configuration>
           <archive>
             <manifestEntries>
-              <git-revision>7ccb14fe226d766bcbb2377f3e472fdd74eb74e8</git-revision>
+              <git-revision>b955ecd9d579fc30283eb18d1e9d2a34abd03ce5</git-revision>
             </manifestEntries>
           </archive>
         </configuration>
