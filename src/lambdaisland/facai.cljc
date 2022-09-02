@@ -56,6 +56,12 @@
                    :resolve #(do ~fact-name)
                    ~@args)))))
 
+(defn with [factory opts]
+  (fk/defer factory {:with opts}))
+
+(defn with-opts [factory opts]
+  (fk/defer factory opts))
+
 (defn unify
   "Use in rules to signify that certain parts of the build tree should be unified,
   i.e. that they should share the same value. It plays a similar role as an lvar
@@ -85,6 +91,11 @@
      (fk/defer thunk opts)
      (:facai.result/value (fk/build nil factory opts)))))
 
+(defn all
+  "Given a build result, return the built value as well as any linked entities."
+  [{:facai.result/keys [value linked] :as res}]
+  (into [value] (map val linked)))
+
 (defn build-all
   "Build the given factory or template. Returns a sequence of all entities that were built."
   ([factory]
@@ -92,9 +103,7 @@
   ([factory rules]
    (build-all factory rules nil))
   ([factory rules opts]
-   (let [{:facai.result/keys [value linked] :as res}
-         (fk/build nil factory opts)]
-     (into [value] (map :value linked)))))
+   (all (fk/build nil factory opts))))
 
 (defn value
   "Given the result map returned by [[build]], retrieve the built value."
