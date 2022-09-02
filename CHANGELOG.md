@@ -2,7 +2,16 @@
 
 ## Added
 
+- Introduced `with` and `with-opts` as a public API for creating deferreds. This
+  may not stick, we may decide to always return a deferred when calling a
+  factory directly instead.
+- Add a new key `:facai.build/factory` to the context when calling
+  {before,after}-create-factory hooks, so that hooks don't have to deal with
+  unppwrapping deferreds
+
 ## Fixed
+
+- Fix selector matching on a single segment wildcard selector: `[:*]`
 
 ## Changed
 
