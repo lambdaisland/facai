@@ -78,18 +78,16 @@ looks like.
    :user/handle "lilli42"
    :user/email  "lilli42@example.com"})
 
-;; We can generate data from this template by calling the factory as a function,
-;; which is an alias for calling `f/build-val`
+;; We can generate data from this template by calling `f/build-val`
 
-(user) ; or (f/build-val user)
+(f/build-val user)
 ;; => #:user{:name "Lilliam Predovic",
 ;;           :handle "lilli42",
 ;;           :email "lilli42@example.com"}
 
-;; It can take a few options, use `:with` to override or supply additional
-;; values.
+;; To override additional values you can pass a map to the factory:
 
-(user {:with {:user/name "Mellissa Schimmel"}})
+(f/build-val (user {:user/name "Mellissa Schimmel"}))
 ;; => #:user{:name "Mellissa Schimmel",
 ;;           :handle "lilli42",
 ;;           :email "lilli42@example.com"}
@@ -205,6 +203,50 @@ looks like.
 ;;            :roles #{"author"}},
 ;;     :post/uri-slug "/post"}
 ```
+
+## Deferred factory generation
+
+When calling a factory as a function, rather than actually generating data, we
+simply return a value that keeps track of the factory you called, and the
+options you passed. Actual instantiation only happens when you call
+`f/build-val`.
+
+This provides a concise way to specify overrides, either when creating
+factories, or when building values.
+
+```clj
+(f/defactory article
+ {:article/submitter (user {:user/name "Mr. submit"})})
+ 
+;; or
+
+(f/build-val article {:with {:article/submitter {:user/name "Mr. submit"}}})
+
+;; or
+
+(f/build-val (article {:article/submitter {:user/name "Mr. submit"}}))
+```
+
+The syntax works as follows. `f/build-val` takes two arguments, a factory or
+template, and a map of options: `:with`, `:rules`, `:traits`.
+
+Calling a factory with *keyword arguments* (key value pairs) is equivalent to
+passing these options in to `f/build-val`.
+
+When passing a single map instead of keyword args this is equivalent to using
+`:with`.
+
+```clj
+(f/build-val user {:with {:user/name "jill"}})
+;; equals
+(user :with {:user/name "jill"}
+;; equals
+(user {:user/name "jill"}
+```
+
+This provides a concise syntax for the most common case: overriding values,
+while still allowing us to distinguish explicit options like `:rules` and
+`:traits`.
 
 ## Paths, Selectors, Rules, and Unification
 

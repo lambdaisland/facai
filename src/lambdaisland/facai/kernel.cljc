@@ -22,7 +22,9 @@
     (var? thunk)
     @thunk
     (factory? thunk)
-    thunk
+    (if-let [resolve (:facai.factory/resolve thunk)]
+      (resolve)
+      thunk)
     :else
     (thunk)))
 

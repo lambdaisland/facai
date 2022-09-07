@@ -16,12 +16,29 @@
 (defrecord Factory []
   #?@(:clj
       (clojure.lang.IFn
-       (invoke [this] (build-val this nil))
-       (invoke [this opts] (build-val this opts)))
+       (applyTo [this xs] (clojure.lang.AFn/applyToHelper this xs))
+       (invoke [this] this)
+       (invoke [this opts] (fk/defer this {:with opts}))
+       (invoke [this k v] (fk/defer this {k v}))
+       (invoke [this ka va kb vb] (fk/defer this {ka va kb vb}))
+       (invoke [this ka va kb vb kc vc] (fk/defer this {ka va kb vb kc vc}))
+       (invoke [this ka va kb vb kc vc kd vd] (fk/defer this {ka va kb vb kc vc kd vd}))
+       (invoke [this ka va kb vb kc vc kd vd ke ve] (fk/defer this {ka va kb vb kc vc kd vd ke ve}))
+       (invoke [this ka va kb vb kc vc kd vd ke ve kf vf] (fk/defer this {ka va kb vb kc vc kd vd ke ve kf vf}))
+       (invoke [this ka va kb vb kc vc kd vd ke ve kf vf kg vg] (fk/defer this {ka va kb vb kc vc kd vd ke ve kf vf kg vg}))
+       (invoke [this ka va kb vb kc vc kd vd ke ve kf vf kg vg kh vh] (fk/defer this {ka va kb vb kc vc kd vd ke ve kf vf kg vg kh vh})))
       :cljs
       (cljs.core/IFn
-       (-invoke [this] (build-val this nil))
-       (-invoke [this opts] (build-val this opts)))))
+       (-invoke [this] this)
+       (-invoke [this opts] (fk/defer this {:with opts}))
+       (-invoke [this k v] (fk/defer this {k v}))
+       (-invoke [this ka va kb vb] (fk/defer this {ka va kb vb}))
+       (-invoke [this ka va kb vb kc vc] (fk/defer this {ka va kb vb kc vc}))
+       (-invoke [this ka va kb vb kc vc kd vd] (fk/defer this {ka va kb vb kc vc kd vd}))
+       (-invoke [this ka va kb vb kc vc kd vd ke ve] (fk/defer this {ka va kb vb kc vc kd vd ke ve}))
+       (-invoke [this ka va kb vb kc vc kd vd ke ve kf vf] (fk/defer this {ka va kb vb kc vc kd vd ke ve kf vf}))
+       (-invoke [this ka va kb vb kc vc kd vd ke ve kf vf kg vg] (fk/defer this {ka va kb vb kc vc kd vd ke ve kf vf kg vg}))
+       (-invoke [this ka va kb vb kc vc kd vd ke ve kf vf kg vg kh vh] (fk/defer this {ka va kb vb kc vc kd vd ke ve kf vf kg vg kh vh})))))
 
 (defn factory
   "Create a factory instance, these are just maps with a `(comp :type meta)` of
