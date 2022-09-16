@@ -100,7 +100,7 @@ looks like.
    :user/handle "lilli42"
    :user/email  #(str "lilli" (rand-int 100) "@example.com")})
 
-(user)
+(f/build-val user)
 ;; => #:user{:name "Lilliam Predovic",
 ;;           :handle "lilli42",
 ;;           :email "lilli92@example.com"}
@@ -133,13 +133,12 @@ looks like.
    :article/status :draft}
 
   :traits
-  {:with
-   {:published {:article/status "published"}
-    :unpublished {:article/status "unpublished"}
-    :in-the-future {:article/published-at #(fh/days-from-now 2)}
-    :in-the-past {:article/published-at #(fh/days-ago 2)}}})
+  {:published {:with {:article/status "published"}}
+   :unpublished {:with {:article/status "unpublished"}}
+   :in-the-future {:with {:article/published-at #(fh/days-from-now 2)}}
+   :in-the-past {:with {:article/published-at #(fh/days-ago 2)}}})
 
-(article {:traits [:published :in-the-future]})
+(f/build-val article {:traits [:published :in-the-future]})
 ;; => #:article{:title "7 Tip-top Things To Try",
 ;;              :status "published",
 ;;              :published-at
@@ -153,7 +152,7 @@ looks like.
    :article/submitter user
    :article/author (user {:with {:user/roles #{"author"}}})})
 
-(article)
+(f/build-val article)
 ;; => #:article{:title "7 Tip-top Things To Try",
 ;;              :submitter
 ;;              #:user{:name "Mr. Reinaldo Hartmann",
@@ -170,7 +169,7 @@ looks like.
 ;; will only get expanded when building the `article`, so you get a different
 ;; username each time.
 
-(article)
+(f/build-val article)
 ;; => #:article{:title "7 Tip-top Things To Try",
 ;;              :submitter
 ;;              #:user{:name "Hobert Fadel",
@@ -190,7 +189,7 @@ looks like.
   :inherit article
   {:post/uri-slug "/post"})
 
-(blog-post)
+(f/build-val blog-post)
 ;; => {:article/title "7 Tip-top Things To Try",
 ;;     :article/submitter
 ;;     #:user{:name "Rima Wintheiser",
@@ -403,9 +402,9 @@ which is a shorthand for `(update ctx :facai.result/value ...)`
      (fn [{:as res :keys [product quantity]}]
        (assoc res :total (* (:price product) quantity))))))
 
-(product-line-item);; => {:product {:sku "123", :price 12.99}, :quantity 1, :total 12.99}
-(product-line-item {:with {:quantity 2}});; => {:product {:sku "123", :price 12.99}, :quantity 2, :total 25.98}
-(product-line-item {:rules {:price 69 :quantity 2}});; => {:product {:sku "123", :price 69}, :quantity 2, :total 138}
+(f/build-val product-line-item);; => {:product {:sku "123", :price 12.99}, :quantity 1, :total 12.99}
+(f/build-val product-line-item {:with {:quantity 2}});; => {:product {:sku "123", :price 12.99}, :quantity 2, :total 25.98}
+(f/build-val product-line-item {:rules {:price 69 :quantity 2}});; => {:product {:sku "123", :price 69}, :quantity 2, :total 138}
 ```
 
 Notice how the result always has the right total price.
