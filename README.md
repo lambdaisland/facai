@@ -440,9 +440,9 @@ name.
 ;;     :id 2,
 ;;     :created-at #inst "2022-03-28T10:44:05.447624000-00:00"}
 
-;; So what happened here? Faca generated a user, persisted it to the database,
+;; So what happened here? Facai generated a user, persisted it to the database,
 ;; the database assigned a unique id, and we then used that for the association
-;; when generating the article. The datbase also generated the value for
+;; when generating the article. The database also generated the value for
 ;; created-at.
 
 ;; If you look at the full result of `create!` you see that it also includes these
