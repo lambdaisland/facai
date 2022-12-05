@@ -6,6 +6,19 @@
 
 Factories for fun and profit! Gongxi facai!
 
+We are working on the next iteration of this idea called
+[Harvest](https://github.com/lambdaisland/harvest). Rather than introducing some
+major breaking changes here, we are going to keep things stable here, while
+working on the new API under `lambdaisland.harvest`.
+
+New users should consider using Harvest once it has an official release out.
+Existing users can decide if they want to stick to Facai, or make the effort to
+switch.
+
+We will still accept bugfixes on this repo, but no new features, and we will no
+longer actively maintain the code here beyond shepherding incoming issues and
+PRs.
+
 ## Getting Started
 
 An example speaks a thousand words. How often have you looked at a function
