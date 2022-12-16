@@ -1,10 +1,13 @@
 # Unreleased
 
-## Added
-
 ## Fixed
 
+- Fix two-arity version of build-all
+- When unifying, don't recurse down the stored lvar value when reusing it
+
 ## Changed
+
+- Remove three-arity version of build-all
 
 # 0.7.59-alpha (2022-09-02 / 161a3b7)
 

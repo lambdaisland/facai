@@ -100,9 +100,7 @@
   "Build the given factory or template. Returns a sequence of all entities that were built."
   ([factory]
    (build-all factory nil))
-  ([factory rules]
-   (build-all factory rules nil))
-  ([factory rules opts]
+  ([factory opts]
    (all (fk/build nil factory opts))))
 
 (defn value

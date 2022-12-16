@@ -89,7 +89,7 @@
   (some #(when (path-match? (:facai.build/path ctx) (key %))
            (let [v (val %)]
              (if (lvar? v)
-               (@(:facai.build/!lvars ctx) v v)
+               (get @(:facai.build/!lvars ctx) v v)
                v)))
         (:facai.build/rules ctx)))
 
@@ -273,6 +273,9 @@
               (deferred-build? input)
               (build-factory ctx (unwrap input) (:opts input))
 
+              (::final (meta input))
+              (assoc ctx :facai.result/value input)
+
               :else
               (build-template ctx input opts))
         ;; hook passed-in as option
@@ -280,5 +283,5 @@
                  (hook ctx)
                  ctx)]
     (when (lvar? rule)
-      (vswap! lvar-store assoc rule (:facai.result/value result)))
+      (vswap! lvar-store assoc rule (with-meta (:facai.result/value result) {::final true})))
     result))
