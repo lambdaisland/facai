@@ -1,10 +1,8 @@
 # Unreleased
 
-## Added
-
 ## Fixed
 
-## Changed
+- Make handling of deferreds more consistent
 
 # 0.8.68-alpha (2022-12-16 / 1f31590)
 

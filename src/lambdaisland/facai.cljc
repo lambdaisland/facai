@@ -123,13 +123,16 @@
     ;; FIXMEL: There's also some ambiguity here, a selector like [:foo 0] can either
     ;; select the first element in a sequentially generated collection, or the
     ;; first match for [:foo]...
-    (and (vector? selector) (int? (last selector)))
-    (or
-     (some-> (nth (sel result (vec (butlast selector))) (last selector) nil)
-             vector)
-     (keep #(when (fk/path-match? (key %) selector)
-              (val %))
-           (:facai.result/linked result)))
+
+    ;; Leaving this out for now, this is going to lead to surprising results.
+
+    ;; (and (vector? selector) (int? (last selector)))
+    ;; (or
+    ;;  (seq (keep #(when (fk/path-match? (key %) selector)
+    ;;                (val %))
+    ;;             (:facai.result/linked result)))
+    ;;  (some-> (nth (sel result (vec (butlast selector))) (last selector) nil)
+    ;;          vector))
 
     :else
     (keep #(when (fk/path-match? (key %) selector)
