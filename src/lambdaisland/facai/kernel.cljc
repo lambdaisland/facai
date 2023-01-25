@@ -39,14 +39,13 @@
     (factory? f)
     (:facai.factory/id f)
     (deferred-build? f)
-    (:facai.factory/id (unwrap f))))
+    (factory-id (unwrap f))))
 
 (defn match1? [p s]
   (or (= s p)
       (= :* s)
       (and (set? s) (some (partial match1? p) s))
-      (and (or (factory? s)
-               (deferred-build? s))
+      (and (factory-id s)
            (match1? p (factory-id s)))))
 
 (defn path-match? [path selector]
@@ -253,7 +252,7 @@
               rules
               (assoc :facai.build/rules rules)
 
-              (or (deferred-build? input) (factory? input))
+              (factory-id input)
               (push-path (factory-id input))
 
               :->
@@ -270,8 +269,11 @@
               (factory? input)
               (build-factory ctx input opts)
 
-              (deferred-build? input)
+              (and (deferred-build? input) (factory-id input))
               (build-factory ctx (unwrap input) (:opts input))
+
+              (deferred-build? input)
+              (build ctx (unwrap input) (:opts input))
 
               (::final (meta input))
               (assoc ctx :facai.result/value input)

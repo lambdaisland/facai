@@ -9,7 +9,7 @@
   (into []
         (keep #(when (:xt/id %)
                  [::xt/put %]))
-        (cons value (vals linked))))
+        (vals linked)))
 
 (defn after-build-factory-impl
   "`:facai.hooks/after-build-factory` implementation which assigns a `:xt/id` and

@@ -17,7 +17,8 @@
   #?@(:clj
       (clojure.lang.IFn
        (invoke [this] (build-val this nil))
-       (invoke [this opts] (build-val this opts)))
+       (invoke [this opts] (build-val this opts))
+       (applyTo [this args] (apply build-val this args)))
       :cljs
       (cljs.core/IFn
        (-invoke [this] (build-val this nil))
@@ -94,7 +95,7 @@
 (defn all
   "Given a build result, return the built value as well as any linked entities."
   [{:facai.result/keys [value linked] :as res}]
-  (into [value] (map val linked)))
+  (map val linked))
 
 (defn build-all
   "Build the given factory or template. Returns a sequence of all entities that were built."
@@ -112,7 +113,25 @@
   "Given the result map returned by [[build]], return any entities that match the
   given selector."
   [result selector]
-  (let [selector (if (vector? selector) selector [selector])]
+  (cond
+    (and (map? selector) (not (fk/factory? selector)))
+    (update-vals selector (partial sel result))
+
+    ;; Special casing this even though this should be more general, but it's not
+    ;; trivial to roll this behavior into path-match?
+
+    ;; FIXMEL: There's also some ambiguity here, a selector like [:foo 0] can either
+    ;; select the first element in a sequentially generated collection, or the
+    ;; first match for [:foo]...
+    (and (vector? selector) (int? (last selector)))
+    (or
+     (some-> (nth (sel result (vec (butlast selector))) (last selector) nil)
+             vector)
+     (keep #(when (fk/path-match? (key %) selector)
+              (val %))
+           (:facai.result/linked result)))
+
+    :else
     (keep #(when (fk/path-match? (key %) selector)
              (val %))
           (:facai.result/linked result))))
